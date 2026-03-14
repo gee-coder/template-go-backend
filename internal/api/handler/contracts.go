@@ -10,11 +10,13 @@ import (
 
 // AuthService is the auth handler dependency contract.
 type AuthService interface {
-	Login(ctx context.Context, username string, password string) (*service.TokenPayload, error)
+	Login(ctx context.Context, account string, password string, loginType string) (*service.TokenPayload, error)
+	Register(ctx context.Context, input service.RegisterInput) (*service.TokenPayload, error)
 	Refresh(ctx context.Context, refreshToken string) (*service.TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*service.ProfileUser, error)
 	ResolvePermissions(ctx context.Context, userID uint) ([]string, error)
+	Options() service.AuthOptions
 }
 
 // UserService is the user handler dependency contract.
@@ -45,4 +47,3 @@ type MenuService interface {
 type ContactService interface {
 	Create(ctx context.Context, input service.CreateContactSubmissionInput) (*model.ContactSubmission, error)
 }
-

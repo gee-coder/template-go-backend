@@ -10,6 +10,7 @@ import (
 // Config is the root application config.
 type Config struct {
 	App      AppConfig      `mapstructure:"app"`
+	Auth     AuthConfig     `mapstructure:"auth"`
 	HTTP     HTTPConfig     `mapstructure:"http"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
@@ -22,6 +23,14 @@ type AppConfig struct {
 	Name  string `mapstructure:"name"`
 	Env   string `mapstructure:"env"`
 	Debug bool   `mapstructure:"debug"`
+}
+
+// AuthConfig describes public auth settings.
+type AuthConfig struct {
+	EnableEmailLogin        bool `mapstructure:"enableEmailLogin"`
+	EnablePhoneLogin        bool `mapstructure:"enablePhoneLogin"`
+	EnableEmailRegistration bool `mapstructure:"enableEmailRegistration"`
+	EnablePhoneRegistration bool `mapstructure:"enablePhoneRegistration"`
 }
 
 // HTTPConfig describes HTTP server settings.
@@ -88,4 +97,3 @@ func Load() (*Config, error) {
 
 	return &cfg, nil
 }
-

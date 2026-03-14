@@ -13,6 +13,8 @@ import (
 type fakeUserRepository struct {
 	users        map[string]*model.User
 	usersByID    map[uint]*model.User
+	usersByEmail map[string]*model.User
+	usersByPhone map[string]*model.User
 	permissions  []string
 	listResponse []model.User
 }
@@ -39,6 +41,34 @@ func (f *fakeUserRepository) GetByUsername(ctx context.Context, username string)
 	return user, nil
 }
 
+func (f *fakeUserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	if f.usersByEmail != nil {
+		if user, ok := f.usersByEmail[email]; ok {
+			return user, nil
+		}
+	}
+	for _, user := range f.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return nil, utils.ErrNotFound
+}
+
+func (f *fakeUserRepository) GetByPhone(ctx context.Context, phone string) (*model.User, error) {
+	if f.usersByPhone != nil {
+		if user, ok := f.usersByPhone[phone]; ok {
+			return user, nil
+		}
+	}
+	for _, user := range f.users {
+		if user.Phone == phone {
+			return user, nil
+		}
+	}
+	return nil, utils.ErrNotFound
+}
+
 func (f *fakeUserRepository) List(ctx context.Context, filter repository.UserFilter) ([]model.User, error) {
 	if f.listResponse != nil {
 		return f.listResponse, nil
@@ -54,8 +84,24 @@ func (f *fakeUserRepository) Create(ctx context.Context, user *model.User) error
 	if f.users == nil {
 		f.users = map[string]*model.User{}
 	}
+	if f.usersByID == nil {
+		f.usersByID = map[uint]*model.User{}
+	}
+	if f.usersByEmail == nil {
+		f.usersByEmail = map[string]*model.User{}
+	}
+	if f.usersByPhone == nil {
+		f.usersByPhone = map[string]*model.User{}
+	}
 	user.ID = uint(len(f.users) + 1)
 	f.users[user.Username] = user
+	f.usersByID[user.ID] = user
+	if user.Email != "" {
+		f.usersByEmail[user.Email] = user
+	}
+	if user.Phone != "" {
+		f.usersByPhone[user.Phone] = user
+	}
 	return nil
 }
 
@@ -64,13 +110,24 @@ func (f *fakeUserRepository) Update(ctx context.Context, user *model.User) error
 		return utils.ErrNotFound
 	}
 	f.users[user.Username] = user
+	if f.usersByID != nil {
+		f.usersByID[user.ID] = user
+	}
+	if f.usersByEmail != nil && user.Email != "" {
+		f.usersByEmail[user.Email] = user
+	}
+	if f.usersByPhone != nil && user.Phone != "" {
+		f.usersByPhone[user.Phone] = user
+	}
 	return nil
 }
 
 func (f *fakeUserRepository) Delete(ctx context.Context, id uint) error { return nil }
+
 func (f *fakeUserRepository) ReplaceRoles(ctx context.Context, userID uint, roleIDs []uint) error {
 	return nil
 }
+
 func (f *fakeUserRepository) GetPermissions(ctx context.Context, userID uint) ([]string, error) {
 	return f.permissions, nil
 }
@@ -96,4 +153,3 @@ func (f *fakeTokenStore) Delete(ctx context.Context, refreshToken string) error 
 	delete(f.tokens, refreshToken)
 	return nil
 }
-

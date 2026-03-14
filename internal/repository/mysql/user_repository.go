@@ -44,13 +44,37 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 	return &user, nil
 }
 
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).Preload("Roles").Where("email = ?", email).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, utils.ErrNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetByPhone(ctx context.Context, phone string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).Preload("Roles").Where("phone = ?", phone).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, utils.ErrNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepository) List(ctx context.Context, filter repository.UserFilter) ([]model.User, error) {
 	var users []model.User
 	query := r.db.WithContext(ctx).Preload("Roles")
 
 	if filter.Keyword != "" {
 		keyword := "%" + strings.TrimSpace(filter.Keyword) + "%"
-		query = query.Where("username LIKE ? OR nickname LIKE ? OR email LIKE ?", keyword, keyword, keyword)
+		query = query.Where("username LIKE ? OR nickname LIKE ? OR email LIKE ? OR phone LIKE ?", keyword, keyword, keyword, keyword)
 	}
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
@@ -125,4 +149,3 @@ func (r *userRepository) GetPermissions(ctx context.Context, userID uint) ([]str
 	}
 	return permissions, nil
 }
-

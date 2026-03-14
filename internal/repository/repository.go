@@ -34,6 +34,8 @@ type MenuFilter struct {
 type UserRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.User, error)
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByPhone(ctx context.Context, phone string) (*model.User, error)
 	List(ctx context.Context, filter UserFilter) ([]model.User, error)
 	Create(ctx context.Context, user *model.User) error
 	Update(ctx context.Context, user *model.User) error
@@ -136,4 +138,3 @@ func (s *redisTokenStore) Delete(ctx context.Context, refreshToken string) error
 func (s *redisTokenStore) key(refreshToken string) string {
 	return s.prefix + "refresh:" + refreshToken
 }
-

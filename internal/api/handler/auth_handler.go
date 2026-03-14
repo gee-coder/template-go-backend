@@ -5,6 +5,7 @@ import (
 
 	"github.com/gee-coder/template-go-backend/internal/api/middleware"
 	"github.com/gee-coder/template-go-backend/internal/api/request"
+	"github.com/gee-coder/template-go-backend/internal/service"
 	"github.com/gee-coder/template-go-backend/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -32,12 +33,42 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	payload, err := h.authService.Login(c.Request.Context(), req.Username, req.Password)
+	account := req.Account
+	if account == "" {
+		account = req.Username
+	}
+	if account == "" {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required"))
+		return
+	}
+
+	payload, err := h.authService.Login(c.Request.Context(), account, req.Password, req.LoginType)
 	if err != nil {
 		utils.RespondError(c, err)
 		return
 	}
 	utils.RespondOK(c, payload)
+}
+
+// Register handles public user registration.
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req request.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
+		return
+	}
+
+	payload, err := h.authService.Register(c.Request.Context(), service.RegisterInput{
+		Account:      req.Account,
+		RegisterType: req.RegisterType,
+		Nickname:     req.Nickname,
+		Password:     req.Password,
+	})
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondCreated(c, payload)
 }
 
 // Refresh handles access token refresh.
@@ -77,4 +108,9 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 		return
 	}
 	utils.RespondOK(c, profile)
+}
+
+// Options returns public auth options for clients.
+func (h *AuthHandler) Options(c *gin.Context) {
+	utils.RespondOK(c, h.authService.Options())
 }

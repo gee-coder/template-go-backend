@@ -10,50 +10,53 @@ import (
 )
 
 var bindFieldLabels = map[string]string{
-	"Username":     "用户名",
-	"Password":     "密码",
-	"RefreshToken": "刷新令牌",
-	"Nickname":     "昵称",
-	"Email":        "邮箱",
-	"Phone":        "手机号",
-	"Status":       "状态",
-	"RoleIDs":      "角色",
-	"Name":         "名称",
-	"Code":         "编码",
-	"Remark":       "备注",
-	"MenuIDs":      "菜单",
-	"ParentID":     "上级菜单",
-	"Title":        "标题",
-	"Path":         "路径",
-	"Component":    "组件路径",
-	"Icon":         "图标",
-	"Type":         "类型",
-	"Permission":   "权限标识",
-	"Sort":         "排序",
-	"Hidden":       "隐藏状态",
-	"Company":      "公司名称",
-	"Message":      "咨询内容",
-	"Source":       "来源",
+	"Account":      "account",
+	"Username":     "username",
+	"Password":     "password",
+	"LoginType":    "login type",
+	"RegisterType": "register type",
+	"RefreshToken": "refresh token",
+	"Nickname":     "nickname",
+	"Email":        "email",
+	"Phone":        "phone",
+	"Status":       "status",
+	"RoleIDs":      "roles",
+	"Name":         "name",
+	"Code":         "code",
+	"Remark":       "remark",
+	"MenuIDs":      "menus",
+	"ParentID":     "parent menu",
+	"Title":        "title",
+	"Path":         "path",
+	"Component":    "component",
+	"Icon":         "icon",
+	"Type":         "type",
+	"Permission":   "permission",
+	"Sort":         "sort",
+	"Hidden":       "hidden",
+	"Company":      "company",
+	"Message":      "message",
+	"Source":       "source",
 }
 
-// BindErrorMessage converts request bind errors to Chinese user-facing messages.
+// BindErrorMessage converts bind errors to readable user-facing messages.
 func BindErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
 
 	if errors.Is(err, io.EOF) {
-		return "请求参数不能为空"
+		return "request body cannot be empty"
 	}
 
 	var syntaxErr *json.SyntaxError
 	if errors.As(err, &syntaxErr) {
-		return "请求体格式错误，请检查 JSON 内容"
+		return "request body must be valid JSON"
 	}
 
 	var unmarshalTypeErr *json.UnmarshalTypeError
 	if errors.As(err, &unmarshalTypeErr) {
-		return "请求参数类型不正确"
+		return "request field type is invalid"
 	}
 
 	var validationErrs validator.ValidationErrors
@@ -66,23 +69,23 @@ func BindErrorMessage(err error) string {
 
 		switch fieldErr.Tag() {
 		case "required":
-			return fmt.Sprintf("%s不能为空", label)
+			return fmt.Sprintf("%s is required", label)
 		case "email":
-			return fmt.Sprintf("%s格式不正确", label)
+			return fmt.Sprintf("%s format is invalid", label)
 		case "oneof":
-			return fmt.Sprintf("%s取值不合法", label)
+			return fmt.Sprintf("%s value is invalid", label)
 		case "max":
-			return fmt.Sprintf("%s长度不能超过%s", label, fieldErr.Param())
+			return fmt.Sprintf("%s must be at most %s characters", label, fieldErr.Param())
 		case "min":
-			return fmt.Sprintf("%s长度不能少于%s", label, fieldErr.Param())
+			return fmt.Sprintf("%s must be at least %s characters", label, fieldErr.Param())
 		case "gte":
-			return fmt.Sprintf("%s不能小于%s", label, fieldErr.Param())
+			return fmt.Sprintf("%s must be greater than or equal to %s", label, fieldErr.Param())
 		case "lte":
-			return fmt.Sprintf("%s不能大于%s", label, fieldErr.Param())
+			return fmt.Sprintf("%s must be less than or equal to %s", label, fieldErr.Param())
 		default:
-			return fmt.Sprintf("%s格式不正确", label)
+			return fmt.Sprintf("%s format is invalid", label)
 		}
 	}
 
-	return "请求参数不合法"
+	return "request parameters are invalid"
 }

@@ -56,7 +56,7 @@ func main() {
 		logger.Fatal("seed data", zap.Error(err))
 	}
 
-	authService := service.NewAuthService(cfg.JWT, userRepo, tokenStore)
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, userRepo, tokenStore)
 	userService := service.NewUserService(userRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, menuRepo)
 	menuService := service.NewMenuService(menuRepo)

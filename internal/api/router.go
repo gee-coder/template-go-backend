@@ -58,7 +58,9 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	apiV1 := router.Group("/api/v1")
 	apiV1.GET("/healthz", handlers.Health.Check)
 	apiV1.POST("/public/contact-submissions", handlers.Contact.Create)
+	apiV1.GET("/auth/options", handlers.Auth.Options)
 	apiV1.POST("/auth/login", handlers.Auth.Login)
+	apiV1.POST("/auth/register", handlers.Auth.Register)
 	apiV1.POST("/auth/refresh", handlers.Auth.Refresh)
 
 	authenticated := apiV1.Group("")
