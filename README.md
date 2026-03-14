@@ -5,12 +5,19 @@
 ![Gin](https://img.shields.io/badge/Gin-1.9.1-008ECF)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0.45-4479A1?logo=mysql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.2.13-DC382D?logo=redis&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-111827)
 
 一套面向一人公司 / 小团队创业场景的 Golang 后端基础模板，内置认证、权限、用户体系、菜单体系、联系人表单、配置管理、日志、容器化与基础 CI，可作为后续业务项目的稳定底座。
 
 ## 预览占位图
 
 ![Backend Preview](./.github/assets/preview.svg)
+
+## 治理文档
+
+- [LICENSE](./LICENSE)
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md)
 
 ## 1. 项目定位
 
@@ -211,4 +218,3 @@ go build -o app ./cmd/api
 - 在 `internal/repository/model` 中扩展业务模型
 - 在 `internal/api/handler` 中新增控制器
 - 若后续接入多租户，优先从 Claims、Repository 查询条件、模型公共字段统一扩展
-
