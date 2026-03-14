@@ -1,0 +1,94 @@
+package mysql
+
+import (
+	"context"
+
+	"github.com/gee-coder/template-go-backend/internal/repository"
+	"github.com/gee-coder/template-go-backend/internal/repository/model"
+	"github.com/gee-coder/template-go-backend/internal/utils"
+	"gorm.io/gorm"
+)
+
+// AutoMigrate creates the required tables.
+func AutoMigrate(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&model.User{},
+		&model.Role{},
+		&model.Menu{},
+		&model.UserRole{},
+		&model.RoleMenu{},
+		&model.ContactSubmission{},
+	)
+}
+
+// SeedInitialData creates the default role, menus and admin user.
+func SeedInitialData(ctx context.Context, userRepo repository.UserRepository, roleRepo repository.RoleRepository, menuRepo repository.MenuRepository) error {
+	role, err := roleRepo.GetByCode(ctx, "super_admin")
+	if err == nil && role != nil {
+		return nil
+	}
+
+	menus := []*model.Menu{
+		{Name: "dashboard", Title: "工作台", Path: "/dashboard", Component: "views/dashboard/index.vue", Type: "menu", Icon: "House", Permission: "dashboard:view", Sort: 1, Status: "enabled"},
+		{Name: "system", Title: "系统管理", Path: "/system", Component: "Layout", Type: "directory", Icon: "Setting", Permission: "", Sort: 2, Status: "enabled"},
+	}
+
+	for _, menu := range menus {
+		if err := menuRepo.Create(ctx, menu); err != nil {
+			return err
+		}
+	}
+
+	systemMenu := menus[1]
+	systemMenus := []*model.Menu{
+		{ParentID: systemMenu.ID, Name: "user", Title: "用户管理", Path: "/system/users", Component: "views/system/users/index.vue", Type: "menu", Icon: "User", Permission: "system:user:view", Sort: 1, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "user_write", Title: "用户写入", Type: "button", Permission: "system:user:write", Sort: 2, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "role", Title: "角色管理", Path: "/system/roles", Component: "views/system/roles/index.vue", Type: "menu", Icon: "Lock", Permission: "system:role:view", Sort: 3, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "role_write", Title: "角色写入", Type: "button", Permission: "system:role:write", Sort: 4, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "menu", Title: "菜单管理", Path: "/system/menus", Component: "views/system/menus/index.vue", Type: "menu", Icon: "Menu", Permission: "system:menu:view", Sort: 5, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "menu_write", Title: "菜单写入", Type: "button", Permission: "system:menu:write", Sort: 6, Status: "enabled"},
+	}
+	for _, menu := range systemMenus {
+		if err := menuRepo.Create(ctx, menu); err != nil {
+			return err
+		}
+		menus = append(menus, menu)
+	}
+
+	role = &model.Role{
+		Name:   "超级管理员",
+		Code:   "super_admin",
+		Status: "enabled",
+		Remark: "模板初始化角色",
+	}
+	if err := roleRepo.Create(ctx, role); err != nil {
+		return err
+	}
+
+	menuIDs := make([]uint, 0, len(menus))
+	for _, item := range menus {
+		menuIDs = append(menuIDs, item.ID)
+	}
+	if err := roleRepo.ReplaceMenus(ctx, role.ID, menuIDs); err != nil {
+		return err
+	}
+
+	password, err := utils.HashPassword("Admin123!")
+	if err != nil {
+		return err
+	}
+
+	user := &model.User{
+		Username: "admin",
+		Nickname: "系统管理员",
+		Email:    "admin@example.com",
+		Phone:    "18800000000",
+		Status:   "enabled",
+		Password: password,
+	}
+	if err := userRepo.Create(ctx, user); err != nil {
+		return err
+	}
+
+	return userRepo.ReplaceRoles(ctx, user.ID, []uint{role.ID})
+}

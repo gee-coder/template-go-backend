@@ -1,0 +1,14 @@
+.idea/
+.vscode/
+.DS_Store
+bin/
+coverage.out
+dist/
+tmp/
+.env
+.env.local
+*.log
+docs/swagger.json
+docs/swagger.yaml
+vendor/
+
