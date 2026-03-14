@@ -1,0 +1,71 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+template: |
+  ## 变更摘要
+
+  $CHANGES
+
+  ## 升级提示
+
+  - 请检查 README、RELEASE 指南与环境变量示例是否需要同步更新
+  - 如涉及接口契约调整，请同步更新前端仓库
+categories:
+  - title: "Features"
+    labels:
+      - "type:feature"
+  - title: "Fixes"
+    labels:
+      - "type:bug"
+  - title: "Docs"
+    labels:
+      - "type:docs"
+  - title: "Maintenance"
+    labels:
+      - "type:chore"
+      - "dependencies"
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+change-title-escapes: '\<*_&'
+exclude-labels:
+  - "skip-changelog"
+version-resolver:
+  major:
+    labels:
+      - "type:breaking"
+  minor:
+    labels:
+      - "type:feature"
+  patch:
+    labels:
+      - "type:bug"
+      - "type:docs"
+      - "type:chore"
+      - "dependencies"
+  default: patch
+autolabeler:
+  - label: "type:docs"
+    files:
+      - "*.md"
+      - ".github/**"
+      - "docs/**"
+  - label: "area:api"
+    files:
+      - "cmd/**"
+      - "internal/api/**"
+  - label: "area:auth"
+    files:
+      - "internal/**/auth*"
+      - "internal/**/token*"
+  - label: "area:rbac"
+    files:
+      - "internal/**/menu*"
+      - "internal/**/role*"
+      - "internal/**/user*"
+  - label: "area:infra"
+    files:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "configs/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+footer: |
+  维护建议见 `MAINTAINERS.md`、`SUPPORT.md` 与 `RELEASE.md`。

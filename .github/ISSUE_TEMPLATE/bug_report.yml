@@ -2,7 +2,8 @@ name: Bug 报告
 description: 报告模板代码、文档、配置或默认行为中的问题
 title: "[Bug] "
 labels:
-  - bug
+  - type:bug
+  - status:needs-triage
 body:
   - type: textarea
     id: problem
@@ -48,4 +49,3 @@ body:
     attributes:
       label: 日志或补充信息
       description: 可附上报错信息、截图、请求示例等
-

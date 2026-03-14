@@ -1,0 +1,15 @@
+# Default reviewers for the backend template
+* @gee-coder
+
+# Repository governance and release automation
+/.github/ @gee-coder
+/README.md @gee-coder
+/CHANGELOG.md @gee-coder
+/RELEASE.md @gee-coder
+
+# Core application areas
+/cmd/ @gee-coder
+/internal/ @gee-coder
+/configs/ @gee-coder
+/docs/ @gee-coder
+/scripts/ @gee-coder

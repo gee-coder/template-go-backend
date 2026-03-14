@@ -24,6 +24,7 @@
 - [MAINTAINERS.md](./MAINTAINERS.md)
 - [RELEASE.md](./RELEASE.md)
 - [CHANGELOG.md](./CHANGELOG.md)
+- [COLLABORATION.md](./COLLABORATION.md)
 
 ## 1. 项目定位
 

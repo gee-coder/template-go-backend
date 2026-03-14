@@ -2,7 +2,8 @@ name: Feature 功能建议
 description: 提出新的模板能力、工程规范或文档增强建议
 title: "[Feature] "
 labels:
-  - enhancement
+  - type:feature
+  - status:needs-triage
 body:
   - type: textarea
     id: background
@@ -28,4 +29,3 @@ body:
     attributes:
       label: 补充信息
       description: 可附参考项目、截图、示例链接等
-
