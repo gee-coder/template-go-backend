@@ -1,0 +1,51 @@
+name: Bug 报告
+description: 报告模板代码、文档、配置或默认行为中的问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 请清楚描述你遇到的问题
+      placeholder: 在什么场景下出现了什么异常？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 请尽量提供稳定可复现的步骤
+      placeholder: |
+        1. 使用什么配置
+        2. 执行什么命令
+        3. 访问什么接口
+        4. 出现什么结果
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      placeholder: 你原本期望发生什么？
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      placeholder: |
+        OS:
+        Go:
+        MySQL:
+        Redis:
+        其他:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或补充信息
+      description: 可附上报错信息、截图、请求示例等
+

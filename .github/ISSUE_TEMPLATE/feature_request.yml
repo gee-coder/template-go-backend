@@ -1,0 +1,31 @@
+name: Feature 功能建议
+description: 提出新的模板能力、工程规范或文档增强建议
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景与目标
+      description: 你希望解决什么问题，为什么值得放入模板？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 请尽量描述你期望的实现方向
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影响范围
+      placeholder: 会影响哪些目录、模块、接口或部署方式？
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 可附参考项目、截图、示例链接等
+
