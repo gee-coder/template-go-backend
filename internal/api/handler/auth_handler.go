@@ -28,7 +28,7 @@ func (h *AuthHandler) ResolvePermissions(c *gin.Context, userID uint) ([]string,
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	var req request.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -78,4 +78,3 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 	}
 	utils.RespondOK(c, profile)
 }
-

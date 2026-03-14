@@ -18,8 +18,7 @@ func NewHealthHandler() *HealthHandler {
 // Check reports the service health status.
 func (h *HealthHandler) Check(c *gin.Context) {
 	utils.RespondOK(c, gin.H{
-		"status": "ok",
+		"status": "正常",
 		"time":   time.Now(),
 	})
 }
-

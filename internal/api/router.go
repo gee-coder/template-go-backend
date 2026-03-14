@@ -51,7 +51,7 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	router.Use(middleware.CORS(cfg.HTTP.AllowedOrigins))
 
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "template-go-backend running"})
+		c.JSON(http.StatusOK, gin.H{"message": "后端服务运行中"})
 	})
 	router.Static("/docs", "./docs")
 
@@ -84,4 +84,3 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 
 	return router
 }
-

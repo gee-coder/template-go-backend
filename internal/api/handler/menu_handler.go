@@ -25,7 +25,7 @@ func NewMenuHandler(service MenuService) *MenuHandler {
 func (h *MenuHandler) List(c *gin.Context) {
 	var query request.MenuListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *MenuHandler) List(c *gin.Context) {
 func (h *MenuHandler) Create(c *gin.Context) {
 	var req request.CreateMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -71,13 +71,13 @@ func (h *MenuHandler) Create(c *gin.Context) {
 func (h *MenuHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid menu id"))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "菜单 ID 不合法"))
 		return
 	}
 
 	var req request.UpdateMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -105,7 +105,7 @@ func (h *MenuHandler) Update(c *gin.Context) {
 func (h *MenuHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid menu id"))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "菜单 ID 不合法"))
 		return
 	}
 
@@ -115,4 +115,3 @@ func (h *MenuHandler) Delete(c *gin.Context) {
 	}
 	utils.RespondOK(c, gin.H{"success": true})
 }
-

@@ -25,7 +25,7 @@ func NewRoleHandler(service RoleService) *RoleHandler {
 func (h *RoleHandler) List(c *gin.Context) {
 	var query request.RoleListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *RoleHandler) List(c *gin.Context) {
 func (h *RoleHandler) Create(c *gin.Context) {
 	var req request.CreateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -66,13 +66,13 @@ func (h *RoleHandler) Create(c *gin.Context) {
 func (h *RoleHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid role id"))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "角色 ID 不合法"))
 		return
 	}
 
 	var req request.UpdateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *RoleHandler) Update(c *gin.Context) {
 func (h *RoleHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid role id"))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "角色 ID 不合法"))
 		return
 	}
 
@@ -103,4 +103,3 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 	}
 	utils.RespondOK(c, gin.H{"success": true})
 }
-

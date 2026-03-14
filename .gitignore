@@ -11,4 +11,4 @@ tmp/
 docs/swagger.json
 docs/swagger.yaml
 vendor/
-
+*.exe

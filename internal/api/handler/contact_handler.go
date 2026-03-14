@@ -23,7 +23,7 @@ func NewContactHandler(service ContactService) *ContactHandler {
 func (h *ContactHandler) Create(c *gin.Context) {
 	var req request.CreateContactSubmissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, err.Error()))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
@@ -41,4 +41,3 @@ func (h *ContactHandler) Create(c *gin.Context) {
 	}
 	utils.RespondCreated(c, submission)
 }
-

@@ -7,15 +7,15 @@ import (
 
 var (
 	// ErrUnauthorized means the request is unauthenticated.
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrUnauthorized = errors.New("未登录")
 	// ErrForbidden means the request has no permission.
-	ErrForbidden = errors.New("forbidden")
+	ErrForbidden = errors.New("无权限访问")
 	// ErrNotFound means the resource was not found.
-	ErrNotFound = errors.New("resource not found")
+	ErrNotFound = errors.New("资源不存在")
 	// ErrConflict means the resource already exists.
-	ErrConflict = errors.New("resource already exists")
+	ErrConflict = errors.New("资源已存在")
 	// ErrInvalidCredential means the username or password is invalid.
-	ErrInvalidCredential = errors.New("invalid username or password")
+	ErrInvalidCredential = errors.New("用户名或密码错误")
 )
 
 // AppError is a structured business error.
@@ -64,4 +64,3 @@ func ResolveError(err error) *AppError {
 		return NewAppError(http.StatusInternalServerError, http.StatusInternalServerError, "服务器繁忙，请稍后重试")
 	}
 }
-

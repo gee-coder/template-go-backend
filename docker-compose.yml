@@ -14,6 +14,7 @@ services:
       MYSQL_PASSWORD: nex123456
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
 
   redis:
     image: redis:7.2.13
@@ -28,4 +29,3 @@ services:
 volumes:
   mysql_data:
   redis_data:
-

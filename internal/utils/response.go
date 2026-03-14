@@ -14,7 +14,7 @@ type Envelope struct {
 func RespondOK(c *gin.Context, data interface{}) {
 	c.JSON(200, Envelope{
 		Code:      0,
-		Message:   "ok",
+		Message:   "成功",
 		Data:      data,
 		RequestID: RequestIDFromContext(c),
 	})
@@ -24,7 +24,7 @@ func RespondOK(c *gin.Context, data interface{}) {
 func RespondCreated(c *gin.Context, data interface{}) {
 	c.JSON(201, Envelope{
 		Code:      0,
-		Message:   "ok",
+		Message:   "成功",
 		Data:      data,
 		RequestID: RequestIDFromContext(c),
 	})
@@ -49,4 +49,3 @@ func RequestIDFromContext(c *gin.Context) string {
 	requestID, _ := value.(string)
 	return requestID
 }
-

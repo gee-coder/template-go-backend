@@ -7,9 +7,9 @@
 ![Redis](https://img.shields.io/badge/Redis-7.2.13-DC382D?logo=redis&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-111827)
 
-一套面向一人公司 / 小团队创业场景的 Golang 后端基础模板，内置认证、权限、用户体系、菜单体系、联系人表单、配置管理、日志、容器化与基础 CI，可作为后续业务项目的稳定底座。
+一套面向创业团队和中小项目的 Go 后端模板，内置统一响应、JWT + Refresh Token、RBAC、菜单管理、用户管理、官网联系表单、配置管理、日志、容器化和基础 CI。
 
-## 预览占位图
+## 预览图
 
 ![Backend Preview](./.github/assets/preview.svg)
 
@@ -26,13 +26,13 @@
 - [CHANGELOG.md](./CHANGELOG.md)
 - [COLLABORATION.md](./COLLABORATION.md)
 
-## 1. 项目定位
+## 项目定位
 
-- 技术定位：`Gin + GORM + Viper + Zap + JWT + Redis + MySQL`
-- 架构定位：遵循 `API -> Service -> Repository` 分层，避免把业务逻辑堆到入口文件
-- 使用场景：后台管理系统、官网表单服务、小程序统一认证后端
+- 技术栈：`Gin + GORM + Viper + Zap + JWT + Redis + MySQL`
+- 分层结构：`API -> Service -> Repository`
+- 使用场景：管理后台 API、官网公开表单、小程序统一鉴权后端
 
-## 2. 技术栈
+## 技术版本
 
 - Go `1.22.10`
 - Gin `1.9.1`
@@ -44,30 +44,31 @@
 - MySQL `8.0.45`
 - Redis `7.2.13`
 
-## 3. 快速开始总览图
+## 快速开始总览
 
 ```mermaid
 flowchart LR
-    A["复制配置"] --> B["启动 MySQL / Redis"]
-    B --> C["go run ./cmd/api"]
-    C --> D["访问 /api/v1/healthz"]
-    C --> E["前端调用认证与系统接口"]
+    A["复制环境变量"] --> B["启动 MySQL / Redis"]
+    B --> C["导入 SQL 或直接启动后端"]
+    C --> D["go run ./cmd/api"]
+    D --> E["访问 /api/v1/healthz"]
+    D --> F["前端接入认证与系统接口"]
 ```
 
-## 4. 架构图
+## 架构图
 
-### 4.1 系统交互图
+### 系统交互图
 
 ```mermaid
 flowchart LR
-    Admin["Admin 管理后台"] --> API["Backend API"]
-    Website["Nuxt 官网"] --> API
-    Miniapp["UniApp 小程序"] --> API
+    Admin["管理后台"] --> API["后端 API"]
+    Website["官网"] --> API
+    Miniapp["微信小程序"] --> API
     API --> MySQL["MySQL 8.0"]
     API --> Redis["Redis 7.2"]
 ```
 
-### 4.2 后端分层图
+### 后端分层图
 
 ```mermaid
 flowchart TD
@@ -80,93 +81,100 @@ flowchart TD
     Service --> TokenStore["Redis TokenStore"]
 ```
 
-## 5. 目录结构
+## 目录结构
 
-- `cmd/api`：服务启动入口，只负责装配依赖和启动 HTTP 服务
-- `internal/api`：Handler、中间件、请求结构体、路由注册
-- `internal/service`：核心业务逻辑
+- `cmd/api`：服务入口，只负责装配依赖和启动 HTTP 服务
+- `configs`：本地与部署配置
+- `docs`：接口文档占位目录
+- `internal/api`：路由、Handler、中间件、请求参数
+- `internal/config`：配置读取与结构定义
 - `internal/repository`：Repository 接口、模型与 MySQL 实现
-- `internal/config`：配置结构与配置加载
-- `internal/utils`：错误、响应、密码、Token、Request ID 等通用工具
-- `configs`：本地 / 环境配置文件
-- `docs`：OpenAPI 文档占位
-- `scripts`：开发与构建脚本
-- `pkg`：对外可复用公共包
+- `internal/service`：业务逻辑
+- `internal/utils`：响应、错误、密码、Token、Request ID 等公共工具
+- `pkg`：可复用公共包
+- `scripts`：启动与辅助脚本
+- `sql`：显式数据库建表与初始化 SQL
 
-## 6. 已内置模块
+## 已内置模块
 
 - 健康检查：`GET /api/v1/healthz`
 - 登录：`POST /api/v1/auth/login`
-- 刷新 Token：`POST /api/v1/auth/refresh`
+- 刷新令牌：`POST /api/v1/auth/refresh`
 - 登出：`POST /api/v1/auth/logout`
 - 当前用户：`GET /api/v1/auth/profile`
 - 用户管理：`/api/v1/system/users`
 - 角色管理：`/api/v1/system/roles`
 - 菜单管理：`/api/v1/system/menus`
-- 官网联系人表单：`POST /api/v1/public/contact-submissions`
+- 官网联系表单：`POST /api/v1/public/contact-submissions`
 
-## 7. 本地开发使用方式
+## 本地开发
 
-### 7.1 环境准备
+### 1. 环境准备
 
 - 安装 Go `1.22.10`
-- 安装并启动 Docker Desktop
-- 准备 MySQL / Redis，或者直接使用仓库内 `docker-compose.yml`
+- 安装 Docker Desktop
+- 准备 MySQL `8.0.45` 和 Redis `7.2.13`
 
-### 7.2 初始化配置
+### 2. 初始化配置
 
 ```powershell
 Copy-Item .env.example .env
 $env:APP_CONFIG = "configs/config.local.yaml"
 ```
 
-### 7.3 启动依赖
+### 3. 启动依赖
 
 ```powershell
 docker compose up -d
 ```
 
-### 7.4 启动服务
+### 4. 初始化数据库
+
+你可以二选一：
+
+- 方式一：手工导入 SQL
+- 方式二：直接启动后端，让程序自动建表和灌入默认数据
+
+手工导入 SQL：
+
+```powershell
+mysql -unex -pnex123456 < .\sql\schema.sql
+mysql -unex -pnex123456 < .\sql\seed.sql
+```
+
+SQL 目录说明见 [sql/README.md](./sql/README.md)。
+
+### 5. 启动服务
 
 ```powershell
 go run ./cmd/api
 ```
 
-默认启动地址：
+默认地址：
 
 - API：`http://localhost:8080`
-- 文档文件：`http://localhost:8080/docs/swagger.yaml`
+- Swagger 文件：`http://localhost:8080/docs/swagger.yaml`
 
-### 7.5 默认账号
+### 6. 默认账号
 
 - 用户名：`admin`
 - 密码：`Admin123!`
 
-首次启动会自动初始化默认菜单、角色与管理员账号。
+## 配置说明
 
-## 8. 常用命令
+主配置文件见 [configs/config.local.yaml](./configs/config.local.yaml)。
 
-```powershell
-go test ./...
-go build ./cmd/api
-powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
-```
+重点配置项：
 
-## 9. 配置说明
+- `app`：应用名、环境、调试开关
+- `http`：监听地址、超时、跨域白名单
+- `database`：MySQL DSN 和连接池
+- `redis`：Refresh Token 存储
+- `jwt`：签发者、密钥、访问令牌和刷新令牌时长
 
-主配置文件：[`configs/config.local.yaml`](/D:/NexAI/code/backend/configs/config.local.yaml)
+## 部署方式
 
-关键配置项：
-
-- `app`：应用名、环境、调试模式
-- `http`：监听地址、超时、允许跨域来源
-- `database`：MySQL DSN 与连接池
-- `redis`：刷新 Token 存储
-- `jwt`：签发者、密钥、Access / Refresh 过期时间
-
-## 10. 部署方式
-
-### 10.1 部署总览图
+### 部署总览
 
 ```mermaid
 flowchart LR
@@ -177,9 +185,7 @@ flowchart LR
     Service --> Redis["Redis"]
 ```
 
-### 10.2 Docker 部署
-
-适合测试环境、小型线上环境、单机部署。
+### Docker 部署
 
 ```powershell
 docker compose up -d mysql redis
@@ -190,38 +196,37 @@ docker run -d --name template-go-backend `
   template-go-backend:latest
 ```
 
-### 10.3 二进制部署
-
-适合已有 Linux 服务器、希望自行托管进程。
+### 二进制部署
 
 ```powershell
 go build -o app ./cmd/api
 ```
 
-将以下内容部署到服务器：
+部署时至少要携带：
 
-- 编译产物 `app`
-- 目录 `configs/`
-- 目录 `docs/`
+- 可执行文件 `app`
+- `configs/`
+- `docs/`
+- 如需手工初始化数据库时使用的 `sql/`
 
-然后通过 systemd、Supervisor 或其他进程守护方式启动。
+## 常用命令
 
-### 10.4 反向代理建议
+```powershell
+go test ./...
+go build ./cmd/api
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
+```
 
-- Nginx / Caddy 暴露 `80/443`
-- `/api/` 反向代理到后端 `8080`
-- 如官网与管理后台同域部署，可由反向代理统一分发静态资源与 API
-
-## 11. 验证结果
+## 验证结果
 
 当前模板已实际通过：
 
 - `go test ./...`
 - `go build ./cmd/api`
 
-## 12. 扩展建议
+## 扩展建议
 
-- 在 `internal/service` 中新增订单、商品、支付等业务模块
-- 在 `internal/repository/model` 中扩展业务模型
-- 在 `internal/api/handler` 中新增控制器
-- 若后续接入多租户，优先从 Claims、Repository 查询条件、模型公共字段统一扩展
+- 在 `internal/service` 中扩展订单、商品、支付等业务模块
+- 在 `internal/repository/model` 中新增业务模型
+- 在 `internal/api/handler` 中接入新的控制器
+- 如果后续接多租户，优先从 Claims、Repository 查询条件和公共模型字段统一扩展

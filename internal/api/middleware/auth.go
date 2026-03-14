@@ -20,7 +20,7 @@ func JWTAuth(secret string) gin.HandlerFunc {
 
 		parts := strings.SplitN(header, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			utils.RespondError(c, utils.NewAppError(http.StatusUnauthorized, http.StatusUnauthorized, "Authorization 格式错误"))
+		utils.RespondError(c, utils.NewAppError(http.StatusUnauthorized, http.StatusUnauthorized, "认证头格式错误"))
 			c.Abort()
 			return
 		}
@@ -50,4 +50,3 @@ func MustUserID(c *gin.Context) uint {
 	}
 	return claims.UserID
 }
-
