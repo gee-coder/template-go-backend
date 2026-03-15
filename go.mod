@@ -12,7 +12,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.49.0
 	gorm.io/driver/mysql v1.5.7
-	gorm.io/gorm v1.25.12
+	gorm.io/gorm v1.31.1
 )
 
 require (
