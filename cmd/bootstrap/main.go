@@ -3,12 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/gee-coder/template-go-backend/internal/api"
 	"github.com/gee-coder/template-go-backend/internal/bootstrap"
 )
 
 func main() {
-	if err := bootstrap.RunHTTP(true, api.NewRouter); err != nil {
+	if err := bootstrap.RunDatabaseBootstrap(); err != nil {
 		log.Fatal(err)
 	}
 }

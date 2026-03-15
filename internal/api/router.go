@@ -48,8 +48,37 @@ func NewHandlerSet(
 	}
 }
 
-// NewRouter creates the gin router.
+// NewRouter creates the all-in-one gin router.
 func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gin.Engine {
+	router := newBaseRouter(cfg, logger, handlers, "backend-api")
+	registerPublicRoutes(router, handlers)
+	registerAuthRoutes(router, cfg, handlers)
+	registerSystemRoutes(router, cfg, handlers)
+	return router
+}
+
+// NewPublicRouter creates the public-facing router.
+func NewPublicRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gin.Engine {
+	router := newBaseRouter(cfg, logger, handlers, "public-api")
+	registerPublicRoutes(router, handlers)
+	return router
+}
+
+// NewAuthRouter creates the auth-focused router.
+func NewAuthRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gin.Engine {
+	router := newBaseRouter(cfg, logger, handlers, "auth-api")
+	registerAuthRoutes(router, cfg, handlers)
+	return router
+}
+
+// NewSystemRouter creates the system-management router.
+func NewSystemRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gin.Engine {
+	router := newBaseRouter(cfg, logger, handlers, "system-api")
+	registerSystemRoutes(router, cfg, handlers)
+	return router
+}
+
+func newBaseRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet, serviceName string) *gin.Engine {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -61,16 +90,29 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	router.Use(middleware.CORS(cfg.HTTP.AllowedOrigins))
 
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "后端服务运行中"})
+		c.JSON(http.StatusOK, gin.H{
+			"service": serviceName,
+			"message": "ok",
+		})
 	})
 	router.Static("/docs", "./docs")
 	router.Static("/uploads", cfg.App.UploadPath())
 
 	apiV1 := router.Group("/api/v1")
 	apiV1.GET("/healthz", handlers.Health.Check)
+
+	return router
+}
+
+func registerPublicRoutes(router *gin.Engine, handlers *HandlerSet) {
+	apiV1 := router.Group("/api/v1")
 	apiV1.POST("/public/contact-submissions", handlers.Contact.Create)
-	apiV1.GET("/auth/options", handlers.Auth.Options)
 	apiV1.GET("/branding/settings", handlers.BrandingSetting.GetPublic)
+}
+
+func registerAuthRoutes(router *gin.Engine, cfg *config.Config, handlers *HandlerSet) {
+	apiV1 := router.Group("/api/v1")
+	apiV1.GET("/auth/options", handlers.Auth.Options)
 	apiV1.POST("/auth/login", handlers.Auth.Login)
 	apiV1.POST("/auth/register", handlers.Auth.Register)
 	apiV1.POST("/auth/refresh", handlers.Auth.Refresh)
@@ -81,6 +123,12 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	authenticated.PUT("/auth/profile", handlers.Auth.UpdateProfile)
 	authenticated.POST("/auth/avatar-assets", handlers.Auth.UploadAvatarAsset)
 	authenticated.POST("/auth/logout", handlers.Auth.Logout)
+}
+
+func registerSystemRoutes(router *gin.Engine, cfg *config.Config, handlers *HandlerSet) {
+	apiV1 := router.Group("/api/v1")
+	authenticated := apiV1.Group("")
+	authenticated.Use(middleware.JWTAuth(cfg.JWT.Secret))
 
 	system := authenticated.Group("/system")
 	system.GET("/users", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:user:view"), handlers.User.List)
@@ -104,6 +152,4 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	system.PUT("/branding-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:branding-setting:write"), handlers.BrandingSetting.Update)
 	system.POST("/branding-settings/assets", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:branding-setting:write"), handlers.BrandingSetting.UploadAsset)
 	system.GET("/login-audits", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:login-audit:view"), handlers.LoginAudit.List)
-
-	return router
 }

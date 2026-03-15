@@ -6,7 +6,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/app ./cmd/api
+
+ARG APP_ENTRY=./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/app ${APP_ENTRY}
 
 FROM alpine:3.21
 
@@ -17,4 +19,3 @@ COPY docs /app/docs
 
 EXPOSE 8080
 CMD ["/app/app"]
-

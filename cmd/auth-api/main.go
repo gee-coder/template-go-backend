@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := bootstrap.RunHTTP(true, api.NewRouter); err != nil {
+	if err := bootstrap.RunHTTP(false, api.NewAuthRouter); err != nil {
 		log.Fatal(err)
 	}
 }
