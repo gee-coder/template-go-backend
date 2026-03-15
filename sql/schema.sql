@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `nickname` varchar(64) NOT NULL,
   `email` varchar(128) DEFAULT NULL,
   `phone` varchar(32) DEFAULT NULL,
-  `avatar` varchar(64) DEFAULT 'default-01',
+  `avatar` varchar(255) DEFAULT 'default-01',
   `status` varchar(32) DEFAULT 'enabled',
   `password` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
@@ -60,6 +60,25 @@ CREATE TABLE IF NOT EXISTS `auth_settings` (
   `enable_phone_login` tinyint(1) DEFAULT '1',
   `enable_email_registration` tinyint(1) DEFAULT '1',
   `enable_phone_registration` tinyint(1) DEFAULT '1',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `branding_settings` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `app_title` varchar(128) DEFAULT NULL,
+  `console_name` varchar(128) DEFAULT NULL,
+  `product_tagline` varchar(255) DEFAULT NULL,
+  `logo_mark_url` varchar(255) DEFAULT NULL,
+  `favicon_url` varchar(255) DEFAULT NULL,
+  `login_hero_url` varchar(255) DEFAULT NULL,
+  `primary` varchar(16) DEFAULT NULL,
+  `primary_dark` varchar(16) DEFAULT NULL,
+  `shell_start` varchar(16) DEFAULT NULL,
+  `shell_end` varchar(16) DEFAULT NULL,
+  `hero_start` varchar(16) DEFAULT NULL,
+  `hero_end` varchar(16) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

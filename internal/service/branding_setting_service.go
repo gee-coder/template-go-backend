@@ -31,6 +31,7 @@ type BrandingSettings struct {
 	ConsoleName    string        `json:"consoleName"`
 	ProductTagline string        `json:"productTagline"`
 	LogoMarkURL    string        `json:"logoMarkUrl"`
+	FaviconURL     string        `json:"faviconUrl"`
 	LoginHeroURL   string        `json:"loginHeroUrl"`
 	Theme          BrandingTheme `json:"theme"`
 }
@@ -92,6 +93,7 @@ func (s *brandingSettingService) Get(ctx context.Context) (BrandingSettings, err
 		}
 		return BrandingSettings{}, err
 	}
+
 	result := brandingSettingsFromModel(setting)
 	if s.cache != nil {
 		_ = s.cache.SetJSON(ctx, brandingSettingsCacheKey, result, brandingCacheTTL)
@@ -131,15 +133,15 @@ func (s *brandingSettingService) UploadAsset(_ context.Context, input UploadBran
 	}
 
 	kind := strings.TrimSpace(input.Kind)
-	if kind != "logoMark" && kind != "loginHero" {
+	if kind != "logoMark" && kind != "favicon" && kind != "loginHero" {
 		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "图片类型不支持")
 	}
 
 	ext := strings.ToLower(filepath.Ext(input.File.Filename))
 	switch ext {
-	case ".png", ".jpg", ".jpeg", ".svg", ".webp":
+	case ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico":
 	default:
-		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "仅支持 png、jpg、jpeg、svg、webp 图片")
+		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "仅支持 PNG、JPG、JPEG、SVG、WEBP、ICO 图片")
 	}
 
 	targetDir := filepath.Join(s.uploadDir, "branding")
@@ -175,6 +177,7 @@ func defaultBrandingSettings() BrandingSettings {
 		ConsoleName:    "Nex Console",
 		ProductTagline: "可替换品牌素材与主色的通用管理后台",
 		LogoMarkURL:    "/branding/logo-mark.svg",
+		FaviconURL:     "/branding/logo-mark.svg",
 		LoginHeroURL:   "/branding/login-hero.svg",
 		Theme: BrandingTheme{
 			Primary:     "#2563eb",
@@ -197,6 +200,7 @@ func brandingSettingsFromModel(setting *model.BrandingSetting) BrandingSettings 
 		ConsoleName:    setting.ConsoleName,
 		ProductTagline: setting.ProductTagline,
 		LogoMarkURL:    setting.LogoMarkURL,
+		FaviconURL:     setting.FaviconURL,
 		LoginHeroURL:   setting.LoginHeroURL,
 		Theme: BrandingTheme{
 			Primary:     setting.Primary,
@@ -214,6 +218,7 @@ func applyBrandingSettings(target *model.BrandingSetting, input BrandingSettings
 	target.ConsoleName = input.ConsoleName
 	target.ProductTagline = input.ProductTagline
 	target.LogoMarkURL = strings.TrimSpace(input.LogoMarkURL)
+	target.FaviconURL = strings.TrimSpace(input.FaviconURL)
 	target.LoginHeroURL = strings.TrimSpace(input.LoginHeroURL)
 	target.Primary = input.Theme.Primary
 	target.PrimaryDark = input.Theme.PrimaryDark
@@ -230,6 +235,7 @@ func normalizeBrandingSettings(input BrandingSettings) BrandingSettings {
 		ConsoleName:    normalizeText(input.ConsoleName, defaults.ConsoleName),
 		ProductTagline: normalizeText(input.ProductTagline, defaults.ProductTagline),
 		LogoMarkURL:    strings.TrimSpace(input.LogoMarkURL),
+		FaviconURL:     strings.TrimSpace(input.FaviconURL),
 		LoginHeroURL:   strings.TrimSpace(input.LoginHeroURL),
 		Theme: BrandingTheme{
 			Primary:     normalizeHexColor(input.Theme.Primary, defaults.Theme.Primary),

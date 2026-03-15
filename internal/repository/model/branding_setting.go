@@ -7,6 +7,7 @@ type BrandingSetting struct {
 	ConsoleName    string `gorm:"size:128" json:"consoleName"`
 	ProductTagline string `gorm:"size:255" json:"productTagline"`
 	LogoMarkURL    string `gorm:"size:255" json:"logoMarkUrl"`
+	FaviconURL     string `gorm:"size:255" json:"faviconUrl"`
 	LoginHeroURL   string `gorm:"size:255" json:"loginHeroUrl"`
 	Primary        string `gorm:"size:16" json:"primary"`
 	PrimaryDark    string `gorm:"size:16" json:"primaryDark"`

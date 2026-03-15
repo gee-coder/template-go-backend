@@ -16,6 +16,7 @@ type UpdateBrandingSettingRequest struct {
 	ConsoleName    string               `json:"consoleName" binding:"omitempty,max=128"`
 	ProductTagline string               `json:"productTagline" binding:"omitempty,max=255"`
 	LogoMarkURL    string               `json:"logoMarkUrl" binding:"omitempty,max=255"`
+	FaviconURL     string               `json:"faviconUrl" binding:"omitempty,max=255"`
 	LoginHeroURL   string               `json:"loginHeroUrl" binding:"omitempty,max=255"`
 	Theme          BrandingThemeRequest `json:"theme"`
 }

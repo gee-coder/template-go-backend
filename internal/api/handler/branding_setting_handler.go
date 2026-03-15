@@ -52,6 +52,7 @@ func (h *BrandingSettingHandler) Update(c *gin.Context) {
 		ConsoleName:    req.ConsoleName,
 		ProductTagline: req.ProductTagline,
 		LogoMarkURL:    req.LogoMarkURL,
+		FaviconURL:     req.FaviconURL,
 		LoginHeroURL:   req.LoginHeroURL,
 		Theme: service.BrandingTheme{
 			Primary:     req.Theme.Primary,
