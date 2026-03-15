@@ -47,10 +47,15 @@ func main() {
 		logger.Fatal("auto migrate", zap.Error(err))
 	}
 
+	if err := os.MkdirAll(cfg.App.UploadPath(), 0o755); err != nil {
+		logger.Fatal("create upload dir", zap.Error(err))
+	}
+
 	userRepo := mysql.NewUserRepository(db)
 	roleRepo := mysql.NewRoleRepository(db)
 	menuRepo := mysql.NewMenuRepository(db)
 	authSettingRepo := mysql.NewAuthSettingRepository(db)
+	brandingSettingRepo := mysql.NewBrandingSettingRepository(db)
 	loginAuditRepo := mysql.NewLoginAuditRepository(db)
 	contactRepo := mysql.NewContactSubmissionRepository(db)
 
@@ -60,13 +65,14 @@ func main() {
 
 	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore)
 	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo)
+	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, cfg.App.UploadPath())
 	loginAuditService := service.NewLoginAuditService(loginAuditRepo)
 	userService := service.NewUserService(userRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, menuRepo)
 	menuService := service.NewMenuService(menuRepo)
 	contactService := service.NewContactService(contactRepo)
 
-	handlerSet := api.NewHandlerSet(authService, authSettingService, loginAuditService, userService, roleService, menuService, contactService)
+	handlerSet := api.NewHandlerSet(authService, authSettingService, brandingSettingService, loginAuditService, userService, roleService, menuService, contactService)
 	router := api.NewRouter(cfg, logger, handlerSet)
 
 	server := &http.Server{

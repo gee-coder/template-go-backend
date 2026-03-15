@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -20,9 +21,10 @@ type Config struct {
 
 // AppConfig describes global application settings.
 type AppConfig struct {
-	Name  string `mapstructure:"name"`
-	Env   string `mapstructure:"env"`
-	Debug bool   `mapstructure:"debug"`
+	Name      string `mapstructure:"name"`
+	Env       string `mapstructure:"env"`
+	Debug     bool   `mapstructure:"debug"`
+	UploadDir string `mapstructure:"uploadDir"`
 }
 
 // AuthConfig describes public auth settings.
@@ -76,6 +78,14 @@ type SwaggerConfig struct {
 // Address returns the HTTP bind address.
 func (c HTTPConfig) Address() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+}
+
+// UploadPath returns the asset upload directory.
+func (c AppConfig) UploadPath() string {
+	if strings.TrimSpace(c.UploadDir) == "" {
+		return "./storage/uploads"
+	}
+	return c.UploadDir
 }
 
 // Load loads config from APP_CONFIG or the default local config.

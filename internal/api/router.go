@@ -12,20 +12,22 @@ import (
 
 // HandlerSet groups all route handlers.
 type HandlerSet struct {
-	Health      *handler.HealthHandler
-	Auth        *handler.AuthHandler
-	AuthSetting *handler.AuthSettingHandler
-	LoginAudit  *handler.LoginAuditHandler
-	User        *handler.UserHandler
-	Role        *handler.RoleHandler
-	Menu        *handler.MenuHandler
-	Contact     *handler.ContactHandler
+	Health          *handler.HealthHandler
+	Auth            *handler.AuthHandler
+	AuthSetting     *handler.AuthSettingHandler
+	BrandingSetting *handler.BrandingSettingHandler
+	LoginAudit      *handler.LoginAuditHandler
+	User            *handler.UserHandler
+	Role            *handler.RoleHandler
+	Menu            *handler.MenuHandler
+	Contact         *handler.ContactHandler
 }
 
 // NewHandlerSet creates all handlers.
 func NewHandlerSet(
 	auth handler.AuthService,
 	authSetting handler.AuthSettingService,
+	brandingSetting handler.BrandingSettingService,
 	loginAudit handler.LoginAuditService,
 	user handler.UserService,
 	role handler.RoleService,
@@ -33,14 +35,15 @@ func NewHandlerSet(
 	contact handler.ContactService,
 ) *HandlerSet {
 	return &HandlerSet{
-		Health:      handler.NewHealthHandler(),
-		Auth:        handler.NewAuthHandler(auth, loginAudit),
-		AuthSetting: handler.NewAuthSettingHandler(authSetting),
-		LoginAudit:  handler.NewLoginAuditHandler(loginAudit),
-		User:        handler.NewUserHandler(user),
-		Role:        handler.NewRoleHandler(role),
-		Menu:        handler.NewMenuHandler(menu),
-		Contact:     handler.NewContactHandler(contact),
+		Health:          handler.NewHealthHandler(),
+		Auth:            handler.NewAuthHandler(auth, loginAudit),
+		AuthSetting:     handler.NewAuthSettingHandler(authSetting),
+		BrandingSetting: handler.NewBrandingSettingHandler(brandingSetting),
+		LoginAudit:      handler.NewLoginAuditHandler(loginAudit),
+		User:            handler.NewUserHandler(user),
+		Role:            handler.NewRoleHandler(role),
+		Menu:            handler.NewMenuHandler(menu),
+		Contact:         handler.NewContactHandler(contact),
 	}
 }
 
@@ -60,11 +63,13 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 		c.JSON(http.StatusOK, gin.H{"message": "后端服务运行中"})
 	})
 	router.Static("/docs", "./docs")
+	router.Static("/uploads", cfg.App.UploadPath())
 
 	apiV1 := router.Group("/api/v1")
 	apiV1.GET("/healthz", handlers.Health.Check)
 	apiV1.POST("/public/contact-submissions", handlers.Contact.Create)
 	apiV1.GET("/auth/options", handlers.Auth.Options)
+	apiV1.GET("/branding/settings", handlers.BrandingSetting.GetPublic)
 	apiV1.POST("/auth/login", handlers.Auth.Login)
 	apiV1.POST("/auth/register", handlers.Auth.Register)
 	apiV1.POST("/auth/refresh", handlers.Auth.Refresh)
@@ -93,6 +98,9 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 
 	system.GET("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:view"), handlers.AuthSetting.Get)
 	system.PUT("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:write"), handlers.AuthSetting.Update)
+	system.GET("/branding-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:branding-setting:view"), handlers.BrandingSetting.Get)
+	system.PUT("/branding-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:branding-setting:write"), handlers.BrandingSetting.Update)
+	system.POST("/branding-settings/assets", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:branding-setting:write"), handlers.BrandingSetting.UploadAsset)
 	system.GET("/login-audits", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:login-audit:view"), handlers.LoginAudit.List)
 
 	return router

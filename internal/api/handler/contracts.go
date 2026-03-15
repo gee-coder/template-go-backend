@@ -26,6 +26,13 @@ type AuthSettingService interface {
 	Update(ctx context.Context, input service.UpdateAuthSettingInput) (service.AuthOptions, error)
 }
 
+// BrandingSettingService is the branding setting handler dependency contract.
+type BrandingSettingService interface {
+	Get(ctx context.Context) (service.BrandingSettings, error)
+	Update(ctx context.Context, input service.UpdateBrandingSettingInput) (service.BrandingSettings, error)
+	UploadAsset(ctx context.Context, input service.UploadBrandingAssetInput) (service.BrandingAssetPayload, error)
+}
+
 // LoginAuditService is the login audit handler dependency contract.
 type LoginAuditService interface {
 	Create(ctx context.Context, input service.CreateLoginAuditInput) error

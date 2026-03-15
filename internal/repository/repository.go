@@ -57,6 +57,12 @@ type AuthSettingRepository interface {
 	Save(ctx context.Context, setting *model.AuthSetting) error
 }
 
+// BrandingSettingRepository defines data access of branding settings.
+type BrandingSettingRepository interface {
+	Get(ctx context.Context) (*model.BrandingSetting, error)
+	Save(ctx context.Context, setting *model.BrandingSetting) error
+}
+
 // LoginAuditRepository defines data access of login audit logs.
 type LoginAuditRepository interface {
 	Create(ctx context.Context, item *model.LoginAuditLog) error

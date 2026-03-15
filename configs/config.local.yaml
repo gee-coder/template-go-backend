@@ -2,6 +2,7 @@ app:
   name: template-go-backend
   env: local
   debug: true
+  uploadDir: ./storage/uploads
 
 auth:
   enableEmailLogin: true
