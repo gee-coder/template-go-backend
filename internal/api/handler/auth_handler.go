@@ -16,14 +16,16 @@ type AuthHandler struct {
 	authService        AuthService
 	loginAuditService  LoginAuditService
 	avatarAssetService AvatarAssetService
+	smsService         SMSVerificationService
 }
 
 // NewAuthHandler creates an auth handler.
-func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService, avatarAssetService AvatarAssetService) *AuthHandler {
+func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService, avatarAssetService AvatarAssetService, smsService SMSVerificationService) *AuthHandler {
 	return &AuthHandler{
 		authService:        authService,
 		loginAuditService:  loginAuditService,
 		avatarAssetService: avatarAssetService,
+		smsService:         smsService,
 	}
 }
 
@@ -78,6 +80,44 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 	utils.RespondCreated(c, payload)
+}
+
+// SendSMSCode sends a phone verification code through the configured provider.
+func (h *AuthHandler) SendSMSCode(c *gin.Context) {
+	var req request.SendSMSCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
+		return
+	}
+
+	payload, err := h.smsService.SendCode(c.Request.Context(), service.SendSMSCodeInput{
+		Phone:   req.Phone,
+		Purpose: req.Purpose,
+	})
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, payload)
+}
+
+// VerifySMSCode verifies a phone verification code.
+func (h *AuthHandler) VerifySMSCode(c *gin.Context) {
+	var req request.VerifySMSCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
+		return
+	}
+
+	if err := h.smsService.VerifyCode(c.Request.Context(), service.VerifySMSCodeInput{
+		Phone:   req.Phone,
+		Purpose: req.Purpose,
+		Code:    req.Code,
+	}); err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, gin.H{"verified": true})
 }
 
 // Refresh handles access token refresh.

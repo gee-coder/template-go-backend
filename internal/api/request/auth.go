@@ -16,6 +16,19 @@ type RegisterRequest struct {
 	Password     string `json:"password" binding:"required,min=6,max=64"`
 }
 
+// SendSMSCodeRequest describes the SMS send-code payload.
+type SendSMSCodeRequest struct {
+	Phone   string `json:"phone" binding:"required,min=6,max=20"`
+	Purpose string `json:"purpose" binding:"required,oneof=register login bind_phone reset_password"`
+}
+
+// VerifySMSCodeRequest describes the SMS verify-code payload.
+type VerifySMSCodeRequest struct {
+	Phone   string `json:"phone" binding:"required,min=6,max=20"`
+	Purpose string `json:"purpose" binding:"required,oneof=register login bind_phone reset_password"`
+	Code    string `json:"code" binding:"required,min=4,max=8"`
+}
+
 // UpdateProfileRequest describes the self profile update payload.
 type UpdateProfileRequest struct {
 	Avatar string `json:"avatar" binding:"required,min=3,max=255"`

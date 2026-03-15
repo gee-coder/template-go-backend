@@ -25,6 +25,12 @@ type AvatarAssetService interface {
 	Upload(ctx context.Context, input service.UploadAvatarAssetInput) (service.AvatarAssetPayload, error)
 }
 
+// SMSVerificationService is the SMS verification handler dependency contract.
+type SMSVerificationService interface {
+	SendCode(ctx context.Context, input service.SendSMSCodeInput) (service.SMSVerificationPayload, error)
+	VerifyCode(ctx context.Context, input service.VerifySMSCodeInput) error
+}
+
 // AuthSettingService is the auth setting handler dependency contract.
 type AuthSettingService interface {
 	Get(ctx context.Context) (service.AuthOptions, error)

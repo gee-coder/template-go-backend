@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -30,36 +29,28 @@ type AvatarAssetService interface {
 }
 
 type avatarAssetService struct {
-	uploadDir string
+	storage ObjectStorage
 }
 
 // NewAvatarAssetService creates an avatar upload service.
-func NewAvatarAssetService(uploadDir string) AvatarAssetService {
-	return &avatarAssetService{uploadDir: uploadDir}
+func NewAvatarAssetService(storage ObjectStorage) AvatarAssetService {
+	return &avatarAssetService{storage: storage}
 }
 
-func (s *avatarAssetService) Upload(_ context.Context, input UploadAvatarAssetInput) (AvatarAssetPayload, error) {
+func (s *avatarAssetService) Upload(ctx context.Context, input UploadAvatarAssetInput) (AvatarAssetPayload, error) {
 	if input.File == nil {
-		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "请选择要上传的头像图片")
+		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "please choose an avatar image")
 	}
 	if input.File.Size > avatarMaxUploadSize {
-		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "头像图片大小不能超过 2MB")
+		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "avatar image size must be 2MB or smaller")
 	}
 
 	ext := strings.ToLower(filepath.Ext(input.File.Filename))
 	switch ext {
 	case ".png", ".jpg", ".jpeg", ".webp":
 	default:
-		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "头像仅支持 png、jpg、jpeg、webp 格式")
+		return AvatarAssetPayload{}, utils.NewAppError(400, 400, "avatar images must be PNG, JPG, JPEG, or WEBP")
 	}
-
-	targetDir := filepath.Join(s.uploadDir, "avatars")
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return AvatarAssetPayload{}, err
-	}
-
-	filename := "avatar-" + strings.ReplaceAll(utils.NewRequestID(), "-", "") + ext
-	targetPath := filepath.Join(targetDir, filename)
 
 	source, err := input.File.Open()
 	if err != nil {
@@ -67,15 +58,16 @@ func (s *avatarAssetService) Upload(_ context.Context, input UploadAvatarAssetIn
 	}
 	defer source.Close()
 
-	target, err := os.Create(targetPath)
+	stored, err := s.storage.Upload(ctx, UploadObjectInput{
+		Directory:   "avatars",
+		Filename:    "avatar-" + strings.ReplaceAll(utils.NewRequestID(), "-", "") + ext,
+		Reader:      source,
+		Size:        input.File.Size,
+		ContentType: input.File.Header.Get("Content-Type"),
+	})
 	if err != nil {
 		return AvatarAssetPayload{}, err
 	}
-	defer target.Close()
 
-	if _, err := target.ReadFrom(source); err != nil {
-		return AvatarAssetPayload{}, err
-	}
-
-	return AvatarAssetPayload{URL: "/uploads/avatars/" + filename}, nil
+	return AvatarAssetPayload{URL: stored.URL}, nil
 }

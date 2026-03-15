@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -136,6 +137,10 @@ type fakeTokenStore struct {
 	tokens map[string]uint
 }
 
+type fakeCacheStore struct {
+	values map[string][]byte
+}
+
 func (f *fakeTokenStore) Save(ctx context.Context, refreshToken string, userID uint, ttl time.Duration) error {
 	f.tokens[refreshToken] = userID
 	return nil
@@ -151,5 +156,44 @@ func (f *fakeTokenStore) Get(ctx context.Context, refreshToken string) (uint, er
 
 func (f *fakeTokenStore) Delete(ctx context.Context, refreshToken string) error {
 	delete(f.tokens, refreshToken)
+	return nil
+}
+
+func (f *fakeCacheStore) GetJSON(ctx context.Context, key string, target any) error {
+	if f.values == nil {
+		return repository.ErrCacheMiss
+	}
+	payload, ok := f.values[key]
+	if !ok {
+		return repository.ErrCacheMiss
+	}
+	return json.Unmarshal(payload, target)
+}
+
+func (f *fakeCacheStore) SetJSON(ctx context.Context, key string, value any, ttl time.Duration) error {
+	if f.values == nil {
+		f.values = map[string][]byte{}
+	}
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	f.values[key] = payload
+	return nil
+}
+
+func (f *fakeCacheStore) Delete(ctx context.Context, keys ...string) error {
+	for _, key := range keys {
+		delete(f.values, key)
+	}
+	return nil
+}
+
+func (f *fakeCacheStore) DeleteByPrefix(ctx context.Context, prefix string) error {
+	for key := range f.values {
+		if len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			delete(f.values, key)
+		}
+	}
 	return nil
 }

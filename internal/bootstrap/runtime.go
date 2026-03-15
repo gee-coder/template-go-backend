@@ -53,7 +53,20 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 		return nil, err
 	}
 
-	if err := os.MkdirAll(cfg.App.UploadPath(), 0o755); err != nil {
+	if cfg.Storage.ResolvedProvider() == "local" {
+		if err := os.MkdirAll(cfg.App.UploadPath(), 0o755); err != nil {
+			_ = logger.Sync()
+			return nil, err
+		}
+	}
+
+	objectStorage, err := service.NewObjectStorage(cfg)
+	if err != nil {
+		_ = logger.Sync()
+		return nil, err
+	}
+	smsVerificationService, err := service.NewSMSVerificationService(cfg.SMS, cacheStore, logger)
+	if err != nil {
 		_ = logger.Sync()
 		return nil, err
 	}
@@ -77,10 +90,10 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 		}
 	}
 
-	avatarAssetService := service.NewAvatarAssetService(cfg.App.UploadPath())
-	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore)
+	avatarAssetService := service.NewAvatarAssetService(objectStorage)
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore, objectStorage.SupportsPublicURL)
 	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo, cacheStore)
-	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, cfg.App.UploadPath(), cacheStore)
+	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, objectStorage, cacheStore)
 	loginAuditService := service.NewLoginAuditService(loginAuditRepo)
 	userService := service.NewUserService(userRepo, roleRepo, cacheStore)
 	roleService := service.NewRoleService(roleRepo, menuRepo, cacheStore)
@@ -93,6 +106,7 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 		Handlers: api.NewHandlerSet(
 			authService,
 			avatarAssetService,
+			smsVerificationService,
 			authSettingService,
 			brandingSettingService,
 			loginAuditService,

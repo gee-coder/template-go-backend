@@ -3,7 +3,6 @@ package service
 import (
 	"hash/crc32"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/gee-coder/template-go-backend/internal/repository/model"
@@ -21,12 +20,10 @@ var supportedAvatarKeys = []string{
 	"default-08",
 }
 
-var avatarUploadURLPattern = regexp.MustCompile(`^/uploads/avatars/[a-zA-Z0-9._-]+$`)
-
-func normalizeAvatarChoice(value string, fallbackSeeds ...string) (string, error) {
+func normalizeAvatarChoice(value string, uploadedURLValidator func(string) bool, fallbackSeeds ...string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value != "" {
-		if !isSupportedAvatarKey(value) && !isUploadedAvatarURL(value) {
+		if !isSupportedAvatarKey(value) && !isTrustedUploadedAssetURL(value, uploadedURLValidator) {
 			return "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported avatar option")
 		}
 		return value, nil
@@ -43,8 +40,8 @@ func resolveUserAvatar(user *model.User) string {
 	if isSupportedAvatarKey(user.Avatar) {
 		return user.Avatar
 	}
-	if isUploadedAvatarURL(user.Avatar) {
-		return user.Avatar
+	if isTrustedUploadedAssetURL(user.Avatar, nil) {
+		return strings.TrimSpace(user.Avatar)
 	}
 
 	return defaultAvatarForSeeds(user.Username, user.Email, user.Phone, user.Nickname)
@@ -70,8 +67,4 @@ func isSupportedAvatarKey(value string) bool {
 		}
 	}
 	return false
-}
-
-func isUploadedAvatarURL(value string) bool {
-	return avatarUploadURLPattern.MatchString(strings.TrimSpace(value))
 }

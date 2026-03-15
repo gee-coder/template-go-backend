@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -58,17 +57,17 @@ type BrandingSettingService interface {
 }
 
 type brandingSettingService struct {
-	repo      repository.BrandingSettingRepository
-	uploadDir string
-	cache     repository.CacheStore
+	repo    repository.BrandingSettingRepository
+	storage ObjectStorage
+	cache   repository.CacheStore
 }
 
 // NewBrandingSettingService creates a branding setting service.
-func NewBrandingSettingService(repo repository.BrandingSettingRepository, uploadDir string, cache repository.CacheStore) BrandingSettingService {
+func NewBrandingSettingService(repo repository.BrandingSettingRepository, storage ObjectStorage, cache repository.CacheStore) BrandingSettingService {
 	return &brandingSettingService{
-		repo:      repo,
-		uploadDir: uploadDir,
-		cache:     cache,
+		repo:    repo,
+		storage: storage,
+		cache:   cache,
 	}
 }
 
@@ -124,33 +123,25 @@ func (s *brandingSettingService) Update(ctx context.Context, input UpdateBrandin
 	return result, nil
 }
 
-func (s *brandingSettingService) UploadAsset(_ context.Context, input UploadBrandingAssetInput) (BrandingAssetPayload, error) {
+func (s *brandingSettingService) UploadAsset(ctx context.Context, input UploadBrandingAssetInput) (BrandingAssetPayload, error) {
 	if input.File == nil {
-		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "请选择要上传的图片")
+		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "please choose an image")
 	}
 	if input.File.Size > 5*1024*1024 {
-		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "图片大小不能超过 5MB")
+		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "branding image size must be 5MB or smaller")
 	}
 
 	kind := strings.TrimSpace(input.Kind)
 	if kind != "logoMark" && kind != "favicon" && kind != "loginHero" {
-		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "图片类型不支持")
+		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "unsupported branding asset kind")
 	}
 
 	ext := strings.ToLower(filepath.Ext(input.File.Filename))
 	switch ext {
 	case ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico":
 	default:
-		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "仅支持 PNG、JPG、JPEG、SVG、WEBP、ICO 图片")
+		return BrandingAssetPayload{}, utils.NewAppError(400, 400, "branding images must be PNG, JPG, JPEG, SVG, WEBP, or ICO")
 	}
-
-	targetDir := filepath.Join(s.uploadDir, "branding")
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return BrandingAssetPayload{}, err
-	}
-
-	filename := kind + "-" + strings.ReplaceAll(utils.NewRequestID(), "-", "") + ext
-	targetPath := filepath.Join(targetDir, filename)
 
 	source, err := input.File.Open()
 	if err != nil {
@@ -158,24 +149,25 @@ func (s *brandingSettingService) UploadAsset(_ context.Context, input UploadBran
 	}
 	defer source.Close()
 
-	target, err := os.Create(targetPath)
+	stored, err := s.storage.Upload(ctx, UploadObjectInput{
+		Directory:   "branding",
+		Filename:    kind + "-" + strings.ReplaceAll(utils.NewRequestID(), "-", "") + ext,
+		Reader:      source,
+		Size:        input.File.Size,
+		ContentType: input.File.Header.Get("Content-Type"),
+	})
 	if err != nil {
 		return BrandingAssetPayload{}, err
 	}
-	defer target.Close()
 
-	if _, err := target.ReadFrom(source); err != nil {
-		return BrandingAssetPayload{}, err
-	}
-
-	return BrandingAssetPayload{URL: "/uploads/branding/" + filename}, nil
+	return BrandingAssetPayload{URL: stored.URL}, nil
 }
 
 func defaultBrandingSettings() BrandingSettings {
 	return BrandingSettings{
-		AppTitle:       "Nex 管理台",
+		AppTitle:       "Nex Console",
 		ConsoleName:    "Nex Console",
-		ProductTagline: "可替换品牌素材与主色的通用管理后台",
+		ProductTagline: "A configurable admin console template for business systems",
 		LogoMarkURL:    "/branding/logo-mark.svg",
 		FaviconURL:     "/branding/logo-mark.svg",
 		LoginHeroURL:   "/branding/login-hero.svg",

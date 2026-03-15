@@ -68,7 +68,7 @@ func (s *userService) Create(ctx context.Context, input CreateUserInput) (*model
 		Status:   input.Status,
 		Password: password,
 	}
-	avatar, err := normalizeAvatarChoice(input.Avatar, input.Username, input.Email, input.Phone, input.Nickname)
+	avatar, err := normalizeAvatarChoice(input.Avatar, nil, input.Username, input.Email, input.Phone, input.Nickname)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *userService) Update(ctx context.Context, id uint, input UpdateUserInput
 	user.Nickname = input.Nickname
 	user.Email = input.Email
 	user.Phone = input.Phone
-	avatar, err := normalizeAvatarChoice(input.Avatar, user.Username, input.Email, input.Phone, input.Nickname)
+	avatar, err := normalizeAvatarChoice(input.Avatar, nil, user.Username, input.Email, input.Phone, input.Nickname)
 	if err != nil {
 		return nil, err
 	}

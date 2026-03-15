@@ -82,12 +82,13 @@ type AuthService interface {
 }
 
 type authService struct {
-	cfg             config.JWTConfig
-	defaults        config.AuthConfig
-	authSettingRepo repository.AuthSettingRepository
-	userRepo        repository.UserRepository
-	tokenRepo       repository.TokenStore
-	cache           repository.CacheStore
+	cfg                config.JWTConfig
+	defaults           config.AuthConfig
+	authSettingRepo    repository.AuthSettingRepository
+	userRepo           repository.UserRepository
+	tokenRepo          repository.TokenStore
+	cache              repository.CacheStore
+	avatarURLValidator func(string) bool
 }
 
 // NewAuthService creates the auth service.
@@ -98,14 +99,16 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenStore,
 	cache repository.CacheStore,
+	avatarURLValidator func(string) bool,
 ) AuthService {
 	return &authService{
-		cfg:             cfg,
-		defaults:        defaults,
-		authSettingRepo: authSettingRepo,
-		userRepo:        userRepo,
-		tokenRepo:       tokenRepo,
-		cache:           cache,
+		cfg:                cfg,
+		defaults:           defaults,
+		authSettingRepo:    authSettingRepo,
+		userRepo:           userRepo,
+		tokenRepo:          tokenRepo,
+		cache:              cache,
+		avatarURLValidator: avatarURLValidator,
 	}
 }
 
@@ -186,7 +189,7 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported register type")
 	}
 
-	avatar, err := normalizeAvatarChoice("", user.Username, user.Email, user.Phone, user.Nickname)
+	avatar, err := normalizeAvatarChoice("", s.avatarURLValidator, user.Username, user.Email, user.Phone, user.Nickname)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +258,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uint, input Upda
 		return nil, err
 	}
 
-	avatar, err := normalizeAvatarChoice(input.Avatar, user.Username, user.Email, user.Phone, user.Nickname)
+	avatar, err := normalizeAvatarChoice(input.Avatar, s.avatarURLValidator, user.Username, user.Email, user.Phone, user.Nickname)
 	if err != nil {
 		return nil, err
 	}

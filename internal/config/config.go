@@ -16,6 +16,8 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Storage  StorageConfig  `mapstructure:"storage"`
+	SMS      SMSConfig      `mapstructure:"sms"`
 	Swagger  SwaggerConfig  `mapstructure:"swagger"`
 }
 
@@ -25,6 +27,87 @@ type AppConfig struct {
 	Env       string `mapstructure:"env"`
 	Debug     bool   `mapstructure:"debug"`
 	UploadDir string `mapstructure:"uploadDir"`
+}
+
+// StorageConfig describes object storage settings.
+type StorageConfig struct {
+	Provider  string             `mapstructure:"provider"`
+	Local     LocalStorageConfig `mapstructure:"local"`
+	MinIO     MinIOStorageConfig `mapstructure:"minio"`
+	AliyunOSS AliyunOSSConfig    `mapstructure:"aliyunOSS"`
+	HuaweiOBS HuaweiOBSConfig    `mapstructure:"huaweiOBS"`
+}
+
+// LocalStorageConfig describes local filesystem storage settings.
+type LocalStorageConfig struct {
+	PublicBaseURL string `mapstructure:"publicBaseURL"`
+}
+
+// MinIOStorageConfig describes MinIO object storage settings.
+type MinIOStorageConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	AccessKeyID     string `mapstructure:"accessKeyID"`
+	AccessKeySecret string `mapstructure:"accessKeySecret"`
+	Bucket          string `mapstructure:"bucket"`
+	UseSSL          bool   `mapstructure:"useSSL"`
+	PublicBaseURL   string `mapstructure:"publicBaseURL"`
+	RootPath        string `mapstructure:"rootPath"`
+}
+
+// AliyunOSSConfig describes Aliyun OSS settings.
+type AliyunOSSConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	Region          string `mapstructure:"region"`
+	AccessKeyID     string `mapstructure:"accessKeyID"`
+	AccessKeySecret string `mapstructure:"accessKeySecret"`
+	Bucket          string `mapstructure:"bucket"`
+	PublicBaseURL   string `mapstructure:"publicBaseURL"`
+	RootPath        string `mapstructure:"rootPath"`
+}
+
+// HuaweiOBSConfig describes Huawei OBS settings.
+type HuaweiOBSConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	AccessKeyID     string `mapstructure:"accessKeyID"`
+	AccessKeySecret string `mapstructure:"accessKeySecret"`
+	Bucket          string `mapstructure:"bucket"`
+	PublicBaseURL   string `mapstructure:"publicBaseURL"`
+	RootPath        string `mapstructure:"rootPath"`
+}
+
+// SMSConfig describes SMS verification settings.
+type SMSConfig struct {
+	Provider string          `mapstructure:"provider"`
+	CodeTTL  time.Duration   `mapstructure:"codeTTL"`
+	Cooldown time.Duration   `mapstructure:"cooldown"`
+	Mock     MockSMSConfig   `mapstructure:"mock"`
+	Aliyun   AliyunSMSConfig `mapstructure:"aliyun"`
+	Huawei   HuaweiSMSConfig `mapstructure:"huawei"`
+}
+
+// MockSMSConfig describes the built-in mock SMS provider.
+type MockSMSConfig struct {
+	RevealCode bool   `mapstructure:"revealCode"`
+	FixedCode  string `mapstructure:"fixedCode"`
+}
+
+// AliyunSMSConfig reserves Aliyun SMS settings for future provider switching.
+type AliyunSMSConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`
+	AccessKeyID     string `mapstructure:"accessKeyID"`
+	AccessKeySecret string `mapstructure:"accessKeySecret"`
+	SignName        string `mapstructure:"signName"`
+	TemplateCode    string `mapstructure:"templateCode"`
+}
+
+// HuaweiSMSConfig reserves Huawei Cloud SMS settings for future provider switching.
+type HuaweiSMSConfig struct {
+	Endpoint   string `mapstructure:"endpoint"`
+	AppKey     string `mapstructure:"appKey"`
+	AppSecret  string `mapstructure:"appSecret"`
+	Sender     string `mapstructure:"sender"`
+	TemplateID string `mapstructure:"templateID"`
+	Signature  string `mapstructure:"signature"`
 }
 
 // AuthConfig describes public auth settings.
@@ -88,12 +171,47 @@ func (c AppConfig) UploadPath() string {
 	return c.UploadDir
 }
 
+// ResolvedProvider returns the configured storage provider.
+func (c StorageConfig) ResolvedProvider() string {
+	provider := strings.ToLower(strings.TrimSpace(c.Provider))
+	if provider == "" {
+		return "minio"
+	}
+	return provider
+}
+
+// ResolvedCodeTTL returns the configured SMS code TTL.
+func (c SMSConfig) ResolvedCodeTTL() time.Duration {
+	if c.CodeTTL <= 0 {
+		return 5 * time.Minute
+	}
+	return c.CodeTTL
+}
+
+// ResolvedCooldown returns the configured SMS resend cooldown.
+func (c SMSConfig) ResolvedCooldown() time.Duration {
+	if c.Cooldown <= 0 {
+		return time.Minute
+	}
+	return c.Cooldown
+}
+
+// ResolvedProvider returns the configured SMS provider.
+func (c SMSConfig) ResolvedProvider() string {
+	provider := strings.ToLower(strings.TrimSpace(c.Provider))
+	if provider == "" {
+		return "mock"
+	}
+	return provider
+}
+
 // Load loads config from APP_CONFIG or the default local config.
 func Load() (*Config, error) {
 	v := viper.New()
 	v.SetConfigType("yaml")
 	v.SetConfigFile(getConfigPath())
 	v.SetEnvPrefix("APP")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {

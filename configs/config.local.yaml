@@ -42,6 +42,55 @@ jwt:
   accessTTL: 2h
   refreshTTL: 168h
 
+storage:
+  provider: minio
+  local:
+    publicBaseURL: /uploads
+  minio:
+    endpoint: 127.0.0.1:9000
+    accessKeyID: minioadmin
+    accessKeySecret: minioadmin
+    bucket: nex-assets
+    useSSL: false
+    publicBaseURL: http://127.0.0.1:9000/nex-assets
+    rootPath: template/local
+  aliyunOSS:
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    region: cn-hangzhou
+    accessKeyID: ""
+    accessKeySecret: ""
+    bucket: ""
+    publicBaseURL: ""
+    rootPath: template/local
+  huaweiOBS:
+    endpoint: https://obs.cn-north-4.myhuaweicloud.com
+    accessKeyID: ""
+    accessKeySecret: ""
+    bucket: ""
+    publicBaseURL: ""
+    rootPath: template/local
+
+sms:
+  provider: mock
+  codeTTL: 5m
+  cooldown: 60s
+  mock:
+    revealCode: true
+    fixedCode: ""
+  aliyun:
+    endpoint: dysmsapi.aliyuncs.com
+    accessKeyID: ""
+    accessKeySecret: ""
+    signName: ""
+    templateCode: ""
+  huawei:
+    endpoint: ""
+    appKey: ""
+    appSecret: ""
+    sender: ""
+    templateID: ""
+    signature: ""
+
 swagger:
   enabled: true
   path: /docs

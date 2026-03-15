@@ -27,6 +27,7 @@ type HandlerSet struct {
 func NewHandlerSet(
 	auth handler.AuthService,
 	avatarAsset handler.AvatarAssetService,
+	sms handler.SMSVerificationService,
 	authSetting handler.AuthSettingService,
 	brandingSetting handler.BrandingSettingService,
 	loginAudit handler.LoginAuditService,
@@ -37,7 +38,7 @@ func NewHandlerSet(
 ) *HandlerSet {
 	return &HandlerSet{
 		Health:          handler.NewHealthHandler(),
-		Auth:            handler.NewAuthHandler(auth, loginAudit, avatarAsset),
+		Auth:            handler.NewAuthHandler(auth, loginAudit, avatarAsset, sms),
 		AuthSetting:     handler.NewAuthSettingHandler(authSetting),
 		BrandingSetting: handler.NewBrandingSettingHandler(brandingSetting),
 		LoginAudit:      handler.NewLoginAuditHandler(loginAudit),
@@ -115,6 +116,8 @@ func registerAuthRoutes(router *gin.Engine, cfg *config.Config, handlers *Handle
 	apiV1.GET("/auth/options", handlers.Auth.Options)
 	apiV1.POST("/auth/login", handlers.Auth.Login)
 	apiV1.POST("/auth/register", handlers.Auth.Register)
+	apiV1.POST("/auth/sms-codes", handlers.Auth.SendSMSCode)
+	apiV1.POST("/auth/sms-codes/verify", handlers.Auth.VerifySMSCode)
 	apiV1.POST("/auth/refresh", handlers.Auth.Refresh)
 
 	authenticated := apiV1.Group("")
