@@ -162,6 +162,7 @@ func SeedInitialData(ctx context.Context, userRepo repository.UserRepository, ro
 			Nickname: "系统管理员",
 			Email:    "admin@example.com",
 			Phone:    "18800000000",
+			Avatar:   "default-07",
 			Status:   "enabled",
 			Password: password,
 		}

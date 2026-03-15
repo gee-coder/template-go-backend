@@ -39,6 +39,7 @@ type ProfileUser struct {
 	Nickname    string    `json:"nickname"`
 	Email       string    `json:"email"`
 	Phone       string    `json:"phone"`
+	Avatar      string    `json:"avatar"`
 	Status      string    `json:"status"`
 	Roles       []string  `json:"roles"`
 	Permissions []string  `json:"permissions"`
@@ -63,6 +64,11 @@ type RegisterInput struct {
 	Password     string
 }
 
+// UpdateProfileInput describes self profile updates.
+type UpdateProfileInput struct {
+	Avatar string
+}
+
 // AuthService provides auth capabilities.
 type AuthService interface {
 	Login(ctx context.Context, account string, password string, loginType string) (*TokenPayload, error)
@@ -70,6 +76,7 @@ type AuthService interface {
 	Refresh(ctx context.Context, refreshToken string) (*TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*ProfileUser, error)
+	UpdateProfile(ctx context.Context, userID uint, input UpdateProfileInput) (*ProfileUser, error)
 	ResolvePermissions(ctx context.Context, userID uint) ([]string, error)
 	Options(ctx context.Context) (AuthOptions, error)
 }
@@ -176,6 +183,12 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported register type")
 	}
 
+	avatar, err := normalizeAvatarChoice("", user.Username, user.Email, user.Phone, user.Nickname)
+	if err != nil {
+		return nil, err
+	}
+	user.Avatar = avatar
+
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
@@ -222,6 +235,30 @@ func (s *authService) Logout(ctx context.Context, refreshToken string) error {
 func (s *authService) Profile(ctx context.Context, userID uint) (*ProfileUser, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
+		return nil, err
+	}
+
+	permissions, err := s.userRepo.GetPermissions(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildProfileUser(user, permissions), nil
+}
+
+func (s *authService) UpdateProfile(ctx context.Context, userID uint, input UpdateProfileInput) (*ProfileUser, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	avatar, err := normalizeAvatarChoice(input.Avatar, user.Username, user.Email, user.Phone, user.Nickname)
+	if err != nil {
+		return nil, err
+	}
+	user.Avatar = avatar
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 	}
 
@@ -284,6 +321,7 @@ func buildProfileUser(user *model.User, permissions []string) *ProfileUser {
 		Nickname:    user.Nickname,
 		Email:       user.Email,
 		Phone:       user.Phone,
+		Avatar:      resolveUserAvatar(user),
 		Status:      user.Status,
 		Roles:       roleCodes,
 		Permissions: permissions,

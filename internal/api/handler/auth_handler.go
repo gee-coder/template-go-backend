@@ -110,6 +110,26 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 	utils.RespondOK(c, profile)
 }
 
+// UpdateProfile updates the current user profile.
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID := middleware.MustUserID(c)
+
+	var req request.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
+		return
+	}
+
+	profile, err := h.authService.UpdateProfile(c.Request.Context(), userID, service.UpdateProfileInput{
+		Avatar: req.Avatar,
+	})
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, profile)
+}
+
 // Options returns public auth options for clients.
 func (h *AuthHandler) Options(c *gin.Context) {
 	options, err := h.authService.Options(c.Request.Context())

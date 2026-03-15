@@ -15,6 +15,7 @@ type AuthService interface {
 	Refresh(ctx context.Context, refreshToken string) (*service.TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*service.ProfileUser, error)
+	UpdateProfile(ctx context.Context, userID uint, input service.UpdateProfileInput) (*service.ProfileUser, error)
 	ResolvePermissions(ctx context.Context, userID uint) ([]string, error)
 	Options(ctx context.Context) (service.AuthOptions, error)
 }

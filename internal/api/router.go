@@ -69,6 +69,7 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	authenticated := apiV1.Group("")
 	authenticated.Use(middleware.JWTAuth(cfg.JWT.Secret))
 	authenticated.GET("/auth/profile", handlers.Auth.Profile)
+	authenticated.PUT("/auth/profile", handlers.Auth.UpdateProfile)
 	authenticated.POST("/auth/logout", handlers.Auth.Logout)
 
 	system := authenticated.Group("/system")

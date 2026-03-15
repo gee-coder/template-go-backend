@@ -16,6 +16,11 @@ type RegisterRequest struct {
 	Password     string `json:"password" binding:"required,min=6,max=64"`
 }
 
+// UpdateProfileRequest describes the self profile update payload.
+type UpdateProfileRequest struct {
+	Avatar string `json:"avatar" binding:"required,min=3,max=64"`
+}
+
 // RefreshTokenRequest describes the refresh token payload.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken" binding:"required"`

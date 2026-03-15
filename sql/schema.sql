@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `nickname` varchar(64) NOT NULL,
   `email` varchar(128) DEFAULT NULL,
   `phone` varchar(32) DEFAULT NULL,
+  `avatar` varchar(64) DEFAULT 'default-01',
   `status` varchar(32) DEFAULT 'enabled',
   `password` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),

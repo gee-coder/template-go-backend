@@ -135,6 +135,9 @@ func TestAuthServiceRegisterByPhone(t *testing.T) {
 	if payload.User.Phone != "18800001111" {
 		t.Fatalf("expected phone to be persisted, got %s", payload.User.Phone)
 	}
+	if !isSupportedAvatarKey(payload.User.Avatar) {
+		t.Fatalf("expected default avatar to be assigned, got %s", payload.User.Avatar)
+	}
 	if payload.AccessToken == "" {
 		t.Fatalf("expected access token after register")
 	}
@@ -160,5 +163,38 @@ func TestAuthServiceRegisterByEmailDisabled(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected email registration to be blocked")
+	}
+}
+
+func TestAuthServiceUpdateProfileAvatar(t *testing.T) {
+	password, _ := utils.HashPassword("Admin123!")
+	userRepo := &fakeUserRepository{
+		users: map[string]*model.User{
+			"admin": {
+				BaseModel: model.BaseModel{ID: 1},
+				Username:  "admin",
+				Nickname:  "Admin",
+				Password:  password,
+				Status:    "enabled",
+				Avatar:    "default-01",
+			},
+		},
+		usersByID:   map[uint]*model.User{},
+		permissions: []string{"dashboard:view"},
+	}
+	tokenStore := &fakeTokenStore{tokens: map[string]uint{}}
+	svc := NewAuthService(config.JWTConfig{
+		Issuer:     "test",
+		Secret:     "secret",
+		AccessTTL:  time.Hour,
+		RefreshTTL: 24 * time.Hour,
+	}, config.AuthConfig{}, nil, userRepo, tokenStore)
+
+	profile, err := svc.UpdateProfile(context.Background(), 1, UpdateProfileInput{Avatar: "default-05"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if profile.Avatar != "default-05" {
+		t.Fatalf("expected avatar to be updated, got %s", profile.Avatar)
 	}
 }

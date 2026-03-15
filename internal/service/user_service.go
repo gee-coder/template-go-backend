@@ -22,6 +22,7 @@ type CreateUserInput struct {
 	Nickname string
 	Email    string
 	Phone    string
+	Avatar   string
 	Status   string
 	Password string
 	RoleIDs  []uint
@@ -32,6 +33,7 @@ type UpdateUserInput struct {
 	Nickname string
 	Email    string
 	Phone    string
+	Avatar   string
 	Status   string
 	Password string
 	RoleIDs  []uint
@@ -65,6 +67,11 @@ func (s *userService) Create(ctx context.Context, input CreateUserInput) (*model
 		Status:   input.Status,
 		Password: password,
 	}
+	avatar, err := normalizeAvatarChoice(input.Avatar, input.Username, input.Email, input.Phone, input.Nickname)
+	if err != nil {
+		return nil, err
+	}
+	user.Avatar = avatar
 	if user.Status == "" {
 		user.Status = "enabled"
 	}
@@ -89,6 +96,11 @@ func (s *userService) Update(ctx context.Context, id uint, input UpdateUserInput
 	user.Nickname = input.Nickname
 	user.Email = input.Email
 	user.Phone = input.Phone
+	avatar, err := normalizeAvatarChoice(input.Avatar, user.Username, input.Email, input.Phone, input.Nickname)
+	if err != nil {
+		return nil, err
+	}
+	user.Avatar = avatar
 	user.Status = input.Status
 
 	if input.Password != "" {
@@ -112,4 +124,3 @@ func (s *userService) Update(ctx context.Context, id uint, input UpdateUserInput
 func (s *userService) Delete(ctx context.Context, id uint) error {
 	return s.userRepo.Delete(ctx, id)
 }
-

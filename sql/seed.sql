@@ -40,14 +40,15 @@ ON DUPLICATE KEY UPDATE
   `remark` = VALUES(`remark`);
 
 INSERT INTO `users` (
-  `id`, `created_at`, `updated_at`, `username`, `nickname`, `email`, `phone`, `status`, `password`
+  `id`, `created_at`, `updated_at`, `username`, `nickname`, `email`, `phone`, `avatar`, `status`, `password`
 ) VALUES
-  (1, NOW(3), NOW(3), 'admin', '系统管理员', 'admin@example.com', '18800000000', 'enabled', '$2a$10$MeTSW1eArpEklHBm0GgqkOrcse.itOPimmDJqp596oCE0v7gMcaX2')
+  (1, NOW(3), NOW(3), 'admin', '系统管理员', 'admin@example.com', '18800000000', 'default-07', 'enabled', '$2a$10$MeTSW1eArpEklHBm0GgqkOrcse.itOPimmDJqp596oCE0v7gMcaX2')
 ON DUPLICATE KEY UPDATE
   `updated_at` = VALUES(`updated_at`),
   `nickname` = VALUES(`nickname`),
   `email` = VALUES(`email`),
   `phone` = VALUES(`phone`),
+  `avatar` = VALUES(`avatar`),
   `status` = VALUES(`status`),
   `password` = VALUES(`password`);
 

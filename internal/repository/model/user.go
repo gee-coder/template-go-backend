@@ -7,6 +7,7 @@ type User struct {
 	Nickname string `gorm:"size:64;not null" json:"nickname"`
 	Email    string `gorm:"size:128;uniqueIndex" json:"email"`
 	Phone    string `gorm:"size:32;uniqueIndex" json:"phone"`
+	Avatar   string `gorm:"size:64;default:'default-01'" json:"avatar"`
 	Status   string `gorm:"size:32;default:enabled" json:"status"`
 	Password string `gorm:"size:255;not null" json:"-"`
 	Roles    []Role `gorm:"many2many:user_roles;" json:"roles"`
