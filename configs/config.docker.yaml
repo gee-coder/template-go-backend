@@ -1,0 +1,47 @@
+app:
+  name: template-go-backend
+  env: docker
+  debug: false
+  uploadDir: ./storage/uploads
+
+auth:
+  enableEmailLogin: true
+  enablePhoneLogin: true
+  enableEmailRegistration: true
+  enablePhoneRegistration: true
+
+http:
+  host: 0.0.0.0
+  port: 8080
+  readTimeout: 10s
+  writeTimeout: 10s
+  shutdownTimeout: 10s
+  allowedOrigins:
+    - http://localhost:5173
+    - http://127.0.0.1:5173
+    - http://localhost:3000
+    - http://127.0.0.1:3000
+    - http://localhost:5174
+    - http://127.0.0.1:5174
+
+database:
+  dsn: nex:nex123456@tcp(mysql:3306)/nex_template?charset=utf8mb4&parseTime=True&loc=Local
+  maxIdleConns: 10
+  maxOpenConns: 50
+  connMaxLifetime: 60m
+
+redis:
+  addr: redis:6379
+  password: ""
+  db: 0
+  keyPrefix: "nex:template:"
+
+jwt:
+  issuer: nex-template
+  secret: please-change-me
+  accessTTL: 2h
+  refreshTTL: 168h
+
+swagger:
+  enabled: true
+  path: /docs
