@@ -44,6 +44,12 @@ type UserRepository interface {
 	GetPermissions(ctx context.Context, userID uint) ([]string, error)
 }
 
+// AuthSettingRepository defines data access of auth settings.
+type AuthSettingRepository interface {
+	Get(ctx context.Context) (*model.AuthSetting, error)
+	Save(ctx context.Context, setting *model.AuthSetting) error
+}
+
 // RoleRepository defines data access of roles.
 type RoleRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Role, error)

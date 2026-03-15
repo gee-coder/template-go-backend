@@ -11,7 +11,7 @@ type LoginRequest struct {
 // RegisterRequest describes the register payload.
 type RegisterRequest struct {
 	Account      string `json:"account" binding:"required,min=3,max=128"`
-	RegisterType string `json:"registerType" binding:"required,oneof=email phone"`
+	RegisterType string `json:"registerType" binding:"omitempty,oneof=email phone"`
 	Nickname     string `json:"nickname" binding:"omitempty,min=2,max=64"`
 	Password     string `json:"password" binding:"required,min=6,max=64"`
 }

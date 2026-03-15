@@ -12,29 +12,32 @@ import (
 
 // HandlerSet groups all route handlers.
 type HandlerSet struct {
-	Health  *handler.HealthHandler
-	Auth    *handler.AuthHandler
-	User    *handler.UserHandler
-	Role    *handler.RoleHandler
-	Menu    *handler.MenuHandler
-	Contact *handler.ContactHandler
+	Health      *handler.HealthHandler
+	Auth        *handler.AuthHandler
+	AuthSetting *handler.AuthSettingHandler
+	User        *handler.UserHandler
+	Role        *handler.RoleHandler
+	Menu        *handler.MenuHandler
+	Contact     *handler.ContactHandler
 }
 
 // NewHandlerSet creates all handlers.
 func NewHandlerSet(
 	auth handler.AuthService,
+	authSetting handler.AuthSettingService,
 	user handler.UserService,
 	role handler.RoleService,
 	menu handler.MenuService,
 	contact handler.ContactService,
 ) *HandlerSet {
 	return &HandlerSet{
-		Health:  handler.NewHealthHandler(),
-		Auth:    handler.NewAuthHandler(auth),
-		User:    handler.NewUserHandler(user),
-		Role:    handler.NewRoleHandler(role),
-		Menu:    handler.NewMenuHandler(menu),
-		Contact: handler.NewContactHandler(contact),
+		Health:      handler.NewHealthHandler(),
+		Auth:        handler.NewAuthHandler(auth),
+		AuthSetting: handler.NewAuthSettingHandler(authSetting),
+		User:        handler.NewUserHandler(user),
+		Role:        handler.NewRoleHandler(role),
+		Menu:        handler.NewMenuHandler(menu),
+		Contact:     handler.NewContactHandler(contact),
 	}
 }
 
@@ -83,6 +86,9 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	system.POST("/menus", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:menu:write"), handlers.Menu.Create)
 	system.PUT("/menus/:id", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:menu:write"), handlers.Menu.Update)
 	system.DELETE("/menus/:id", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:menu:write"), handlers.Menu.Delete)
+
+	system.GET("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:view"), handlers.AuthSetting.Get)
+	system.PUT("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:write"), handlers.AuthSetting.Update)
 
 	return router
 }

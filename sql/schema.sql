@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS `menus` (
   KEY `idx_menus_parent_id` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `auth_settings` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `enable_email_login` tinyint(1) DEFAULT '1',
+  `enable_phone_login` tinyint(1) DEFAULT '1',
+  `enable_email_registration` tinyint(1) DEFAULT '1',
+  `enable_phone_registration` tinyint(1) DEFAULT '1',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `user_roles` (
   `user_id` bigint unsigned NOT NULL,
   `role_id` bigint unsigned NOT NULL,

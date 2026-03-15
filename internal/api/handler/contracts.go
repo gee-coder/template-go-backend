@@ -16,7 +16,13 @@ type AuthService interface {
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*service.ProfileUser, error)
 	ResolvePermissions(ctx context.Context, userID uint) ([]string, error)
-	Options() service.AuthOptions
+	Options(ctx context.Context) (service.AuthOptions, error)
+}
+
+// AuthSettingService is the auth setting handler dependency contract.
+type AuthSettingService interface {
+	Get(ctx context.Context) (service.AuthOptions, error)
+	Update(ctx context.Context, input service.UpdateAuthSettingInput) (service.AuthOptions, error)
 }
 
 // UserService is the user handler dependency contract.

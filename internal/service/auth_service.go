@@ -71,28 +71,41 @@ type AuthService interface {
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*ProfileUser, error)
 	ResolvePermissions(ctx context.Context, userID uint) ([]string, error)
-	Options() AuthOptions
+	Options(ctx context.Context) (AuthOptions, error)
 }
 
 type authService struct {
-	cfg       config.JWTConfig
-	authCfg   config.AuthConfig
-	userRepo  repository.UserRepository
-	tokenRepo repository.TokenStore
+	cfg             config.JWTConfig
+	defaults        config.AuthConfig
+	authSettingRepo repository.AuthSettingRepository
+	userRepo        repository.UserRepository
+	tokenRepo       repository.TokenStore
 }
 
 // NewAuthService creates the auth service.
-func NewAuthService(cfg config.JWTConfig, authCfg config.AuthConfig, userRepo repository.UserRepository, tokenRepo repository.TokenStore) AuthService {
+func NewAuthService(
+	cfg config.JWTConfig,
+	defaults config.AuthConfig,
+	authSettingRepo repository.AuthSettingRepository,
+	userRepo repository.UserRepository,
+	tokenRepo repository.TokenStore,
+) AuthService {
 	return &authService{
-		cfg:       cfg,
-		authCfg:   authCfg,
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
+		cfg:             cfg,
+		defaults:        defaults,
+		authSettingRepo: authSettingRepo,
+		userRepo:        userRepo,
+		tokenRepo:       tokenRepo,
 	}
 }
 
 func (s *authService) Login(ctx context.Context, account string, password string, loginType string) (*TokenPayload, error) {
-	user, err := s.findUserForLogin(ctx, account, loginType)
+	options, err := s.Options(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.findUserForLogin(ctx, account, loginType, options)
 	if err != nil {
 		if errors.Is(err, utils.ErrNotFound) {
 			return nil, utils.ErrInvalidCredential
@@ -111,14 +124,19 @@ func (s *authService) Login(ctx context.Context, account string, password string
 }
 
 func (s *authService) Register(ctx context.Context, input RegisterInput) (*TokenPayload, error) {
+	options, err := s.Options(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	password, err := utils.HashPassword(input.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	registerType := strings.TrimSpace(input.RegisterType)
+	registerType := detectRegisterType(input.RegisterType, input.Account)
 	if registerType == "" {
-		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "register type is required")
+		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account must be a valid email or phone number")
 	}
 
 	user := &model.User{
@@ -129,7 +147,7 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 
 	switch registerType {
 	case "email":
-		if !s.options().EnableEmailRegistration {
+		if !options.EnableEmailRegistration {
 			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "email registration is disabled")
 		}
 		email := normalizeEmail(input.Account)
@@ -142,7 +160,7 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		user.Username = buildGeneratedUsername("email", email)
 		user.Email = email
 	case "phone":
-		if !s.options().EnablePhoneRegistration {
+		if !options.EnablePhoneRegistration {
 			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "phone registration is disabled")
 		}
 		phone := normalizePhone(input.Account)
@@ -219,8 +237,8 @@ func (s *authService) ResolvePermissions(ctx context.Context, userID uint) ([]st
 	return s.userRepo.GetPermissions(ctx, userID)
 }
 
-func (s *authService) Options() AuthOptions {
-	return s.options()
+func (s *authService) Options(ctx context.Context) (AuthOptions, error) {
+	return loadAuthOptions(ctx, s.defaults, s.authSettingRepo)
 }
 
 func (s *authService) issueTokens(ctx context.Context, user *model.User) (*TokenPayload, error) {
@@ -274,17 +292,49 @@ func buildProfileUser(user *model.User, permissions []string) *ProfileUser {
 	}
 }
 
-func (s *authService) options() AuthOptions {
-	return AuthOptions{
-		EnableUsernameLogin:     true,
-		EnableEmailLogin:        s.authCfg.EnableEmailLogin,
-		EnablePhoneLogin:        s.authCfg.EnablePhoneLogin,
-		EnableEmailRegistration: s.authCfg.EnableEmailLogin && s.authCfg.EnableEmailRegistration,
-		EnablePhoneRegistration: s.authCfg.EnablePhoneLogin && s.authCfg.EnablePhoneRegistration,
+func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repository.AuthSettingRepository) (AuthOptions, error) {
+	options := authOptionsFromDefaults(defaults)
+	if repo == nil {
+		return options, nil
 	}
+
+	setting, err := repo.Get(ctx)
+	if err != nil {
+		if errors.Is(err, utils.ErrNotFound) {
+			return options, nil
+		}
+		return AuthOptions{}, err
+	}
+
+	options.EnableEmailLogin = setting.EnableEmailLogin
+	options.EnablePhoneLogin = setting.EnablePhoneLogin
+	options.EnableEmailRegistration = setting.EnableEmailRegistration
+	options.EnablePhoneRegistration = setting.EnablePhoneRegistration
+	return normalizeAuthOptions(options), nil
 }
 
-func (s *authService) findUserForLogin(ctx context.Context, account string, loginType string) (*model.User, error) {
+func authOptionsFromDefaults(defaults config.AuthConfig) AuthOptions {
+	return normalizeAuthOptions(AuthOptions{
+		EnableUsernameLogin:     true,
+		EnableEmailLogin:        defaults.EnableEmailLogin,
+		EnablePhoneLogin:        defaults.EnablePhoneLogin,
+		EnableEmailRegistration: defaults.EnableEmailRegistration,
+		EnablePhoneRegistration: defaults.EnablePhoneRegistration,
+	})
+}
+
+func normalizeAuthOptions(options AuthOptions) AuthOptions {
+	options.EnableUsernameLogin = true
+	if !options.EnableEmailLogin {
+		options.EnableEmailRegistration = false
+	}
+	if !options.EnablePhoneLogin {
+		options.EnablePhoneRegistration = false
+	}
+	return options
+}
+
+func (s *authService) findUserForLogin(ctx context.Context, account string, loginType string, options AuthOptions) (*model.User, error) {
 	account = strings.TrimSpace(account)
 	if account == "" {
 		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required")
@@ -294,7 +344,7 @@ func (s *authService) findUserForLogin(ctx context.Context, account string, logi
 	case "username":
 		return s.userRepo.GetByUsername(ctx, account)
 	case "email":
-		if !s.options().EnableEmailLogin {
+		if !options.EnableEmailLogin {
 			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "email login is disabled")
 		}
 		email := normalizeEmail(account)
@@ -303,7 +353,7 @@ func (s *authService) findUserForLogin(ctx context.Context, account string, logi
 		}
 		return s.userRepo.GetByEmail(ctx, email)
 	case "phone":
-		if !s.options().EnablePhoneLogin {
+		if !options.EnablePhoneLogin {
 			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "phone login is disabled")
 		}
 		phone := normalizePhone(account)
@@ -312,42 +362,51 @@ func (s *authService) findUserForLogin(ctx context.Context, account string, logi
 		}
 		return s.userRepo.GetByPhone(ctx, phone)
 	case "":
-		return s.findUserByFallback(ctx, account)
+		return s.findUserByFallback(ctx, account, options)
 	default:
 		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported login type")
 	}
 }
 
-func (s *authService) findUserByFallback(ctx context.Context, account string) (*model.User, error) {
-	user, err := s.userRepo.GetByUsername(ctx, account)
-	if err == nil {
-		return user, nil
-	}
-	if !errors.Is(err, utils.ErrNotFound) {
-		return nil, err
-	}
-
-	if s.options().EnableEmailLogin {
+func (s *authService) findUserByFallback(ctx context.Context, account string, options AuthOptions) (*model.User, error) {
+	if options.EnableEmailLogin {
 		email := normalizeEmail(account)
 		if isValidEmail(email) {
-			user, err = s.userRepo.GetByEmail(ctx, email)
+			user, err := s.userRepo.GetByEmail(ctx, email)
 			if err == nil || !errors.Is(err, utils.ErrNotFound) {
 				return user, err
 			}
 		}
 	}
 
-	if s.options().EnablePhoneLogin {
+	if options.EnablePhoneLogin {
 		phone := normalizePhone(account)
 		if isValidPhone(phone) {
-			user, err = s.userRepo.GetByPhone(ctx, phone)
+			user, err := s.userRepo.GetByPhone(ctx, phone)
 			if err == nil || !errors.Is(err, utils.ErrNotFound) {
 				return user, err
 			}
 		}
 	}
 
-	return nil, utils.ErrNotFound
+	return s.userRepo.GetByUsername(ctx, account)
+}
+
+func detectRegisterType(registerType string, account string) string {
+	switch strings.TrimSpace(registerType) {
+	case "email", "phone":
+		return strings.TrimSpace(registerType)
+	}
+
+	account = strings.TrimSpace(account)
+	switch {
+	case isValidEmail(normalizeEmail(account)):
+		return "email"
+	case isValidPhone(normalizePhone(account)):
+		return "phone"
+	default:
+		return ""
+	}
 }
 
 func ensureEmailAvailable(ctx context.Context, userRepo repository.UserRepository, email string) error {

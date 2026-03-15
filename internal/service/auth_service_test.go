@@ -37,7 +37,7 @@ func TestAuthServiceLogin(t *testing.T) {
 		EnablePhoneLogin:        true,
 		EnableEmailRegistration: true,
 		EnablePhoneRegistration: true,
-	}, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore)
 
 	payload, err := svc.Login(context.Background(), "admin", "Admin123!", "")
 	if err != nil {
@@ -71,7 +71,7 @@ func TestAuthServiceLoginInvalidPassword(t *testing.T) {
 		EnablePhoneLogin:        true,
 		EnableEmailRegistration: true,
 		EnablePhoneRegistration: true,
-	}, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore)
 
 	_, err := svc.Login(context.Background(), "admin", "bad-password", "")
 	if !errors.Is(err, utils.ErrInvalidCredential) {
@@ -100,7 +100,7 @@ func TestAuthServiceLoginByEmail(t *testing.T) {
 		RefreshTTL: 24 * time.Hour,
 	}, config.AuthConfig{
 		EnableEmailLogin: true,
-	}, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore)
 
 	payload, err := svc.Login(context.Background(), "admin@example.com", "Admin123!", "email")
 	if err != nil {
@@ -122,7 +122,7 @@ func TestAuthServiceRegisterByPhone(t *testing.T) {
 	}, config.AuthConfig{
 		EnablePhoneLogin:        true,
 		EnablePhoneRegistration: true,
-	}, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore)
 
 	payload, err := svc.Register(context.Background(), RegisterInput{
 		Account:      "18800001111",
@@ -151,7 +151,7 @@ func TestAuthServiceRegisterByEmailDisabled(t *testing.T) {
 	}, config.AuthConfig{
 		EnableEmailLogin:        true,
 		EnableEmailRegistration: false,
-	}, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore)
 
 	_, err := svc.Register(context.Background(), RegisterInput{
 		Account:      "user@example.com",

@@ -50,19 +50,21 @@ func main() {
 	userRepo := mysql.NewUserRepository(db)
 	roleRepo := mysql.NewRoleRepository(db)
 	menuRepo := mysql.NewMenuRepository(db)
+	authSettingRepo := mysql.NewAuthSettingRepository(db)
 	contactRepo := mysql.NewContactSubmissionRepository(db)
 
 	if err := mysql.SeedInitialData(context.Background(), userRepo, roleRepo, menuRepo); err != nil {
 		logger.Fatal("seed data", zap.Error(err))
 	}
 
-	authService := service.NewAuthService(cfg.JWT, cfg.Auth, userRepo, tokenStore)
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore)
+	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo)
 	userService := service.NewUserService(userRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, menuRepo)
 	menuService := service.NewMenuService(menuRepo)
 	contactService := service.NewContactService(contactRepo)
 
-	handlerSet := api.NewHandlerSet(authService, userService, roleService, menuService, contactService)
+	handlerSet := api.NewHandlerSet(authService, authSettingService, userService, roleService, menuService, contactService)
 	router := api.NewRouter(cfg, logger, handlerSet)
 
 	server := &http.Server{

@@ -112,5 +112,10 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 
 // Options returns public auth options for clients.
 func (h *AuthHandler) Options(c *gin.Context) {
-	utils.RespondOK(c, h.authService.Options())
+	options, err := h.authService.Options(c.Request.Context())
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, options)
 }
