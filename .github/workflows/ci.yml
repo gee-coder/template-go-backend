@@ -3,7 +3,6 @@ name: ci
 on:
   push:
     branches: ["main", "master"]
-  pull_request:
 
 jobs:
   test:
@@ -16,4 +15,3 @@ jobs:
       - run: go mod download
       - run: go test ./...
       - run: go build ./cmd/api
-
