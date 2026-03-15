@@ -13,15 +13,17 @@ import (
 
 // AuthHandler handles auth APIs.
 type AuthHandler struct {
-	authService       AuthService
-	loginAuditService LoginAuditService
+	authService        AuthService
+	loginAuditService  LoginAuditService
+	avatarAssetService AvatarAssetService
 }
 
 // NewAuthHandler creates an auth handler.
-func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService) *AuthHandler {
+func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService, avatarAssetService AvatarAssetService) *AuthHandler {
 	return &AuthHandler{
-		authService:       authService,
-		loginAuditService: loginAuditService,
+		authService:        authService,
+		loginAuditService:  loginAuditService,
+		avatarAssetService: avatarAssetService,
 	}
 }
 
@@ -135,6 +137,22 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 	utils.RespondOK(c, profile)
+}
+
+// UploadAvatarAsset uploads a custom avatar image for authenticated users.
+func (h *AuthHandler) UploadAvatarAsset(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "请选择要上传的头像图片"))
+		return
+	}
+
+	payload, err := h.avatarAssetService.Upload(c.Request.Context(), service.UploadAvatarAssetInput{File: file})
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, payload)
 }
 
 // Options returns public auth options for clients.

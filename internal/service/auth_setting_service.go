@@ -26,18 +26,20 @@ type AuthSettingService interface {
 type authSettingService struct {
 	defaults config.AuthConfig
 	repo     repository.AuthSettingRepository
+	cache    repository.CacheStore
 }
 
 // NewAuthSettingService creates an auth setting service.
-func NewAuthSettingService(defaults config.AuthConfig, repo repository.AuthSettingRepository) AuthSettingService {
+func NewAuthSettingService(defaults config.AuthConfig, repo repository.AuthSettingRepository, cache repository.CacheStore) AuthSettingService {
 	return &authSettingService{
 		defaults: defaults,
 		repo:     repo,
+		cache:    cache,
 	}
 }
 
 func (s *authSettingService) Get(ctx context.Context) (AuthOptions, error) {
-	return loadAuthOptions(ctx, s.defaults, s.repo)
+	return loadAuthOptions(ctx, s.defaults, s.repo, s.cache)
 }
 
 func (s *authSettingService) Update(ctx context.Context, input UpdateAuthSettingInput) (AuthOptions, error) {
@@ -69,6 +71,10 @@ func (s *authSettingService) Update(ctx context.Context, input UpdateAuthSetting
 
 	if err := s.repo.Save(ctx, setting); err != nil {
 		return AuthOptions{}, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, authOptionsCacheKey, options, authOptionsCacheTTL)
 	}
 
 	return options, nil

@@ -87,6 +87,7 @@ type authService struct {
 	authSettingRepo repository.AuthSettingRepository
 	userRepo        repository.UserRepository
 	tokenRepo       repository.TokenStore
+	cache           repository.CacheStore
 }
 
 // NewAuthService creates the auth service.
@@ -96,6 +97,7 @@ func NewAuthService(
 	authSettingRepo repository.AuthSettingRepository,
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenStore,
+	cache repository.CacheStore,
 ) AuthService {
 	return &authService{
 		cfg:             cfg,
@@ -103,6 +105,7 @@ func NewAuthService(
 		authSettingRepo: authSettingRepo,
 		userRepo:        userRepo,
 		tokenRepo:       tokenRepo,
+		cache:           cache,
 	}
 }
 
@@ -238,7 +241,7 @@ func (s *authService) Profile(ctx context.Context, userID uint) (*ProfileUser, e
 		return nil, err
 	}
 
-	permissions, err := s.userRepo.GetPermissions(ctx, user.ID)
+	permissions, err := s.loadPermissions(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +265,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uint, input Upda
 		return nil, err
 	}
 
-	permissions, err := s.userRepo.GetPermissions(ctx, user.ID)
+	permissions, err := s.loadPermissions(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -271,11 +274,11 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uint, input Upda
 }
 
 func (s *authService) ResolvePermissions(ctx context.Context, userID uint) ([]string, error) {
-	return s.userRepo.GetPermissions(ctx, userID)
+	return s.loadPermissions(ctx, userID)
 }
 
 func (s *authService) Options(ctx context.Context) (AuthOptions, error) {
-	return loadAuthOptions(ctx, s.defaults, s.authSettingRepo)
+	return loadAuthOptions(ctx, s.defaults, s.authSettingRepo, s.cache)
 }
 
 func (s *authService) issueTokens(ctx context.Context, user *model.User) (*TokenPayload, error) {
@@ -295,7 +298,7 @@ func (s *authService) issueTokens(ctx context.Context, user *model.User) (*Token
 		return nil, fmt.Errorf("save refresh token: %w", err)
 	}
 
-	permissions, err := s.userRepo.GetPermissions(ctx, user.ID)
+	permissions, err := s.loadPermissions(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +310,28 @@ func (s *authService) issueTokens(ctx context.Context, user *model.User) (*Token
 		TokenType:    "Bearer",
 		User:         buildProfileUser(user, permissions),
 	}, nil
+}
+
+func (s *authService) loadPermissions(ctx context.Context, userID uint) ([]string, error) {
+	if s.cache != nil {
+		var cached []string
+		if err := s.cache.GetJSON(ctx, permissionCacheKey(userID), &cached); err == nil {
+			return cached, nil
+		} else if err != nil && err != repository.ErrCacheMiss {
+			return nil, err
+		}
+	}
+
+	permissions, err := s.userRepo.GetPermissions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, permissionCacheKey(userID), permissions, permissionCacheTTL)
+	}
+
+	return permissions, nil
 }
 
 func buildProfileUser(user *model.User, permissions []string) *ProfileUser {
@@ -330,7 +355,16 @@ func buildProfileUser(user *model.User, permissions []string) *ProfileUser {
 	}
 }
 
-func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repository.AuthSettingRepository) (AuthOptions, error) {
+func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repository.AuthSettingRepository, cache repository.CacheStore) (AuthOptions, error) {
+	if cache != nil {
+		var cached AuthOptions
+		if err := cache.GetJSON(ctx, authOptionsCacheKey, &cached); err == nil {
+			return cached, nil
+		} else if err != nil && err != repository.ErrCacheMiss {
+			return AuthOptions{}, err
+		}
+	}
+
 	options := authOptionsFromDefaults(defaults)
 	if repo == nil {
 		return options, nil
@@ -339,6 +373,9 @@ func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repos
 	setting, err := repo.Get(ctx)
 	if err != nil {
 		if errors.Is(err, utils.ErrNotFound) {
+			if cache != nil {
+				_ = cache.SetJSON(ctx, authOptionsCacheKey, options, authOptionsCacheTTL)
+			}
 			return options, nil
 		}
 		return AuthOptions{}, err
@@ -348,7 +385,13 @@ func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repos
 	options.EnablePhoneLogin = setting.EnablePhoneLogin
 	options.EnableEmailRegistration = setting.EnableEmailRegistration
 	options.EnablePhoneRegistration = setting.EnablePhoneRegistration
-	return normalizeAuthOptions(options), nil
+	options = normalizeAuthOptions(options)
+
+	if cache != nil {
+		_ = cache.SetJSON(ctx, authOptionsCacheKey, options, authOptionsCacheTTL)
+	}
+
+	return options, nil
 }
 
 func authOptionsFromDefaults(defaults config.AuthConfig) AuthOptions {

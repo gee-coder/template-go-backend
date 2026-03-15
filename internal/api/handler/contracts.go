@@ -20,6 +20,11 @@ type AuthService interface {
 	Options(ctx context.Context) (service.AuthOptions, error)
 }
 
+// AvatarAssetService is the avatar upload handler dependency contract.
+type AvatarAssetService interface {
+	Upload(ctx context.Context, input service.UploadAvatarAssetInput) (service.AvatarAssetPayload, error)
+}
+
 // AuthSettingService is the auth setting handler dependency contract.
 type AuthSettingService interface {
 	Get(ctx context.Context) (service.AuthOptions, error)

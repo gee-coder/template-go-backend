@@ -42,11 +42,12 @@ type UpdateUserInput struct {
 type userService struct {
 	userRepo repository.UserRepository
 	roleRepo repository.RoleRepository
+	cache    repository.CacheStore
 }
 
 // NewUserService creates the user service.
-func NewUserService(userRepo repository.UserRepository, roleRepo repository.RoleRepository) UserService {
-	return &userService{userRepo: userRepo, roleRepo: roleRepo}
+func NewUserService(userRepo repository.UserRepository, roleRepo repository.RoleRepository, cache repository.CacheStore) UserService {
+	return &userService{userRepo: userRepo, roleRepo: roleRepo, cache: cache}
 }
 
 func (s *userService) List(ctx context.Context, filter repository.UserFilter) ([]model.User, error) {
@@ -84,6 +85,8 @@ func (s *userService) Create(ctx context.Context, input CreateUserInput) (*model
 		return nil, err
 	}
 
+	invalidatePermissionCache(ctx, s.cache, user.ID)
+
 	return s.userRepo.GetByID(ctx, user.ID)
 }
 
@@ -118,9 +121,15 @@ func (s *userService) Update(ctx context.Context, id uint, input UpdateUserInput
 		return nil, err
 	}
 
+	invalidatePermissionCache(ctx, s.cache, user.ID)
+
 	return s.userRepo.GetByID(ctx, user.ID)
 }
 
 func (s *userService) Delete(ctx context.Context, id uint) error {
-	return s.userRepo.Delete(ctx, id)
+	if err := s.userRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+	invalidatePermissionCache(ctx, s.cache, id)
+	return nil
 }

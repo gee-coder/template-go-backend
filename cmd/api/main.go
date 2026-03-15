@@ -42,6 +42,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("connect redis", zap.Error(err))
 	}
+	cacheStore, err := repository.NewRedisCacheStore(cfg.Redis)
+	if err != nil {
+		logger.Fatal("connect redis cache", zap.Error(err))
+	}
 
 	if err := mysql.AutoMigrate(db); err != nil {
 		logger.Fatal("auto migrate", zap.Error(err))
@@ -63,16 +67,17 @@ func main() {
 		logger.Fatal("seed data", zap.Error(err))
 	}
 
-	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore)
-	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo)
-	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, cfg.App.UploadPath())
+	avatarAssetService := service.NewAvatarAssetService(cfg.App.UploadPath())
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore)
+	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo, cacheStore)
+	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, cfg.App.UploadPath(), cacheStore)
 	loginAuditService := service.NewLoginAuditService(loginAuditRepo)
-	userService := service.NewUserService(userRepo, roleRepo)
-	roleService := service.NewRoleService(roleRepo, menuRepo)
-	menuService := service.NewMenuService(menuRepo)
+	userService := service.NewUserService(userRepo, roleRepo, cacheStore)
+	roleService := service.NewRoleService(roleRepo, menuRepo, cacheStore)
+	menuService := service.NewMenuService(menuRepo, cacheStore)
 	contactService := service.NewContactService(contactRepo)
 
-	handlerSet := api.NewHandlerSet(authService, authSettingService, brandingSettingService, loginAuditService, userService, roleService, menuService, contactService)
+	handlerSet := api.NewHandlerSet(authService, avatarAssetService, authSettingService, brandingSettingService, loginAuditService, userService, roleService, menuService, contactService)
 	router := api.NewRouter(cfg, logger, handlerSet)
 
 	server := &http.Server{

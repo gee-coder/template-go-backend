@@ -18,7 +18,7 @@ type RegisterRequest struct {
 
 // UpdateProfileRequest describes the self profile update payload.
 type UpdateProfileRequest struct {
-	Avatar string `json:"avatar" binding:"required,min=3,max=64"`
+	Avatar string `json:"avatar" binding:"required,min=3,max=255"`
 }
 
 // RefreshTokenRequest describes the refresh token payload.

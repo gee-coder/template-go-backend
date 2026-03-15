@@ -59,25 +59,44 @@ type BrandingSettingService interface {
 type brandingSettingService struct {
 	repo      repository.BrandingSettingRepository
 	uploadDir string
+	cache     repository.CacheStore
 }
 
 // NewBrandingSettingService creates a branding setting service.
-func NewBrandingSettingService(repo repository.BrandingSettingRepository, uploadDir string) BrandingSettingService {
+func NewBrandingSettingService(repo repository.BrandingSettingRepository, uploadDir string, cache repository.CacheStore) BrandingSettingService {
 	return &brandingSettingService{
 		repo:      repo,
 		uploadDir: uploadDir,
+		cache:     cache,
 	}
 }
 
 func (s *brandingSettingService) Get(ctx context.Context) (BrandingSettings, error) {
+	if s.cache != nil {
+		var cached BrandingSettings
+		if err := s.cache.GetJSON(ctx, brandingSettingsCacheKey, &cached); err == nil {
+			return cached, nil
+		} else if err != nil && err != repository.ErrCacheMiss {
+			return BrandingSettings{}, err
+		}
+	}
+
 	setting, err := s.repo.Get(ctx)
 	if err != nil {
 		if err == utils.ErrNotFound {
-			return defaultBrandingSettings(), nil
+			defaults := defaultBrandingSettings()
+			if s.cache != nil {
+				_ = s.cache.SetJSON(ctx, brandingSettingsCacheKey, defaults, brandingCacheTTL)
+			}
+			return defaults, nil
 		}
 		return BrandingSettings{}, err
 	}
-	return brandingSettingsFromModel(setting), nil
+	result := brandingSettingsFromModel(setting)
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, brandingSettingsCacheKey, result, brandingCacheTTL)
+	}
+	return result, nil
 }
 
 func (s *brandingSettingService) Update(ctx context.Context, input UpdateBrandingSettingInput) (BrandingSettings, error) {
@@ -96,7 +115,11 @@ func (s *brandingSettingService) Update(ctx context.Context, input UpdateBrandin
 		return BrandingSettings{}, err
 	}
 
-	return brandingSettingsFromModel(setting), nil
+	result := brandingSettingsFromModel(setting)
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, brandingSettingsCacheKey, result, brandingCacheTTL)
+	}
+	return result, nil
 }
 
 func (s *brandingSettingService) UploadAsset(_ context.Context, input UploadBrandingAssetInput) (BrandingAssetPayload, error) {

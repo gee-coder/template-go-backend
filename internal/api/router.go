@@ -26,6 +26,7 @@ type HandlerSet struct {
 // NewHandlerSet creates all handlers.
 func NewHandlerSet(
 	auth handler.AuthService,
+	avatarAsset handler.AvatarAssetService,
 	authSetting handler.AuthSettingService,
 	brandingSetting handler.BrandingSettingService,
 	loginAudit handler.LoginAuditService,
@@ -36,7 +37,7 @@ func NewHandlerSet(
 ) *HandlerSet {
 	return &HandlerSet{
 		Health:          handler.NewHealthHandler(),
-		Auth:            handler.NewAuthHandler(auth, loginAudit),
+		Auth:            handler.NewAuthHandler(auth, loginAudit, avatarAsset),
 		AuthSetting:     handler.NewAuthSettingHandler(authSetting),
 		BrandingSetting: handler.NewBrandingSettingHandler(brandingSetting),
 		LoginAudit:      handler.NewLoginAuditHandler(loginAudit),
@@ -78,6 +79,7 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 	authenticated.Use(middleware.JWTAuth(cfg.JWT.Secret))
 	authenticated.GET("/auth/profile", handlers.Auth.Profile)
 	authenticated.PUT("/auth/profile", handlers.Auth.UpdateProfile)
+	authenticated.POST("/auth/avatar-assets", handlers.Auth.UploadAvatarAsset)
 	authenticated.POST("/auth/logout", handlers.Auth.Logout)
 
 	system := authenticated.Group("/system")

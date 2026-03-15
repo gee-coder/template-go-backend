@@ -3,6 +3,7 @@ package service
 import (
 	"hash/crc32"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gee-coder/template-go-backend/internal/repository/model"
@@ -20,10 +21,12 @@ var supportedAvatarKeys = []string{
 	"default-08",
 }
 
+var avatarUploadURLPattern = regexp.MustCompile(`^/uploads/avatars/[a-zA-Z0-9._-]+$`)
+
 func normalizeAvatarChoice(value string, fallbackSeeds ...string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value != "" {
-		if !isSupportedAvatarKey(value) {
+		if !isSupportedAvatarKey(value) && !isUploadedAvatarURL(value) {
 			return "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported avatar option")
 		}
 		return value, nil
@@ -38,6 +41,9 @@ func resolveUserAvatar(user *model.User) string {
 	}
 
 	if isSupportedAvatarKey(user.Avatar) {
+		return user.Avatar
+	}
+	if isUploadedAvatarURL(user.Avatar) {
 		return user.Avatar
 	}
 
@@ -64,4 +70,8 @@ func isSupportedAvatarKey(value string) bool {
 		}
 	}
 	return false
+}
+
+func isUploadedAvatarURL(value string) bool {
+	return avatarUploadURLPattern.MatchString(strings.TrimSpace(value))
 }

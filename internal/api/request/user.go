@@ -12,7 +12,7 @@ type CreateUserRequest struct {
 	Nickname string `json:"nickname" binding:"required,min=2,max=64"`
 	Email    string `json:"email" binding:"omitempty,email,max=128"`
 	Phone    string `json:"phone" binding:"omitempty,max=32"`
-	Avatar   string `json:"avatar" binding:"omitempty,min=3,max=64"`
+	Avatar   string `json:"avatar" binding:"omitempty,min=3,max=255"`
 	Status   string `json:"status" binding:"omitempty,oneof=enabled disabled"`
 	Password string `json:"password" binding:"required,min=6,max=64"`
 	RoleIDs  []uint `json:"roleIds"`
@@ -23,7 +23,7 @@ type UpdateUserRequest struct {
 	Nickname string `json:"nickname" binding:"required,min=2,max=64"`
 	Email    string `json:"email" binding:"omitempty,email,max=128"`
 	Phone    string `json:"phone" binding:"omitempty,max=32"`
-	Avatar   string `json:"avatar" binding:"omitempty,min=3,max=64"`
+	Avatar   string `json:"avatar" binding:"omitempty,min=3,max=255"`
 	Status   string `json:"status" binding:"required,oneof=enabled disabled"`
 	Password string `json:"password" binding:"omitempty,min=6,max=64"`
 	RoleIDs  []uint `json:"roleIds"`

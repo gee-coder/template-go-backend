@@ -41,11 +41,12 @@ type UpdateMenuInput = CreateMenuInput
 
 type menuService struct {
 	menuRepo repository.MenuRepository
+	cache    repository.CacheStore
 }
 
 // NewMenuService creates the menu service.
-func NewMenuService(menuRepo repository.MenuRepository) MenuService {
-	return &menuService{menuRepo: menuRepo}
+func NewMenuService(menuRepo repository.MenuRepository, cache repository.CacheStore) MenuService {
+	return &menuService{menuRepo: menuRepo, cache: cache}
 }
 
 func (s *menuService) List(ctx context.Context, filter repository.MenuFilter) ([]MenuNode, error) {
@@ -79,6 +80,7 @@ func (s *menuService) Create(ctx context.Context, input CreateMenuInput) (*model
 	if err := s.menuRepo.Create(ctx, menu); err != nil {
 		return nil, err
 	}
+	invalidateAllPermissionCaches(ctx, s.cache)
 	return menu, nil
 }
 
@@ -103,11 +105,16 @@ func (s *menuService) Update(ctx context.Context, id uint, input UpdateMenuInput
 	if err := s.menuRepo.Update(ctx, menu); err != nil {
 		return nil, err
 	}
+	invalidateAllPermissionCaches(ctx, s.cache)
 	return menu, nil
 }
 
 func (s *menuService) Delete(ctx context.Context, id uint) error {
-	return s.menuRepo.Delete(ctx, id)
+	if err := s.menuRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+	invalidateAllPermissionCaches(ctx, s.cache)
+	return nil
 }
 
 func buildMenuTree(menus []model.Menu) []MenuNode {

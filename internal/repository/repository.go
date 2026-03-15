@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -101,6 +103,17 @@ type TokenStore interface {
 	Delete(ctx context.Context, refreshToken string) error
 }
 
+// CacheStore stores JSON payloads in Redis.
+type CacheStore interface {
+	GetJSON(ctx context.Context, key string, target any) error
+	SetJSON(ctx context.Context, key string, value any, ttl time.Duration) error
+	Delete(ctx context.Context, keys ...string) error
+	DeleteByPrefix(ctx context.Context, prefix string) error
+}
+
+// ErrCacheMiss indicates no cache entry was found.
+var ErrCacheMiss = errors.New("cache miss")
+
 // NewMySQL creates a GORM DB instance.
 func NewMySQL(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{
@@ -126,8 +139,38 @@ type redisTokenStore struct {
 	prefix string
 }
 
+type redisCacheStore struct {
+	client *redis.Client
+	prefix string
+}
+
 // NewRedisTokenStore creates a token store backed by Redis.
 func NewRedisTokenStore(cfg config.RedisConfig) (TokenStore, error) {
+	client, err := newRedisClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &redisTokenStore{
+		client: client,
+		prefix: cfg.KeyPrefix,
+	}, nil
+}
+
+// NewRedisCacheStore creates a JSON cache store backed by Redis.
+func NewRedisCacheStore(cfg config.RedisConfig) (CacheStore, error) {
+	client, err := newRedisClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &redisCacheStore{
+		client: client,
+		prefix: cfg.KeyPrefix,
+	}, nil
+}
+
+func newRedisClient(cfg config.RedisConfig) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr,
 		Password: cfg.Password,
@@ -137,11 +180,7 @@ func NewRedisTokenStore(cfg config.RedisConfig) (TokenStore, error) {
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		return nil, fmt.Errorf("ping redis: %w", err)
 	}
-
-	return &redisTokenStore{
-		client: client,
-		prefix: cfg.KeyPrefix,
-	}, nil
+	return client, nil
 }
 
 func (s *redisTokenStore) Save(ctx context.Context, refreshToken string, userID uint, ttl time.Duration) error {
@@ -162,4 +201,51 @@ func (s *redisTokenStore) Delete(ctx context.Context, refreshToken string) error
 
 func (s *redisTokenStore) key(refreshToken string) string {
 	return s.prefix + "refresh:" + refreshToken
+}
+
+func (s *redisCacheStore) GetJSON(ctx context.Context, key string, target any) error {
+	payload, err := s.client.Get(ctx, s.key(key)).Bytes()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return ErrCacheMiss
+		}
+		return err
+	}
+	return json.Unmarshal(payload, target)
+}
+
+func (s *redisCacheStore) SetJSON(ctx context.Context, key string, value any, ttl time.Duration) error {
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return s.client.Set(ctx, s.key(key), payload, ttl).Err()
+}
+
+func (s *redisCacheStore) Delete(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	redisKeys := make([]string, 0, len(keys))
+	for _, key := range keys {
+		redisKeys = append(redisKeys, s.key(key))
+	}
+	return s.client.Del(ctx, redisKeys...).Err()
+}
+
+func (s *redisCacheStore) DeleteByPrefix(ctx context.Context, prefix string) error {
+	pattern := s.key(prefix) + "*"
+	keys, err := s.client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return s.client.Del(ctx, keys...).Err()
+}
+
+func (s *redisCacheStore) key(key string) string {
+	return s.prefix + "cache:" + key
 }

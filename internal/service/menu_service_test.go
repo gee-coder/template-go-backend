@@ -16,7 +16,7 @@ func TestBuildMenuTree(t *testing.T) {
 		},
 	}
 
-	svc := NewMenuService(repo)
+	svc := NewMenuService(repo, nil)
 	menus, err := svc.List(context.Background(), repository.MenuFilter{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

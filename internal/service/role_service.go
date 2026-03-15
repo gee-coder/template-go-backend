@@ -35,11 +35,12 @@ type UpdateRoleInput struct {
 type roleService struct {
 	roleRepo repository.RoleRepository
 	menuRepo repository.MenuRepository
+	cache    repository.CacheStore
 }
 
 // NewRoleService creates the role service.
-func NewRoleService(roleRepo repository.RoleRepository, menuRepo repository.MenuRepository) RoleService {
-	return &roleService{roleRepo: roleRepo, menuRepo: menuRepo}
+func NewRoleService(roleRepo repository.RoleRepository, menuRepo repository.MenuRepository, cache repository.CacheStore) RoleService {
+	return &roleService{roleRepo: roleRepo, menuRepo: menuRepo, cache: cache}
 }
 
 func (s *roleService) List(ctx context.Context, filter repository.RoleFilter) ([]model.Role, error) {
@@ -63,6 +64,7 @@ func (s *roleService) Create(ctx context.Context, input CreateRoleInput) (*model
 	if err := s.roleRepo.ReplaceMenus(ctx, role.ID, input.MenuIDs); err != nil {
 		return nil, err
 	}
+	invalidateAllPermissionCaches(ctx, s.cache)
 	return s.roleRepo.GetByID(ctx, role.ID)
 }
 
@@ -82,10 +84,14 @@ func (s *roleService) Update(ctx context.Context, id uint, input UpdateRoleInput
 	if err := s.roleRepo.ReplaceMenus(ctx, role.ID, input.MenuIDs); err != nil {
 		return nil, err
 	}
+	invalidateAllPermissionCaches(ctx, s.cache)
 	return s.roleRepo.GetByID(ctx, role.ID)
 }
 
 func (s *roleService) Delete(ctx context.Context, id uint) error {
-	return s.roleRepo.Delete(ctx, id)
+	if err := s.roleRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+	invalidateAllPermissionCaches(ctx, s.cache)
+	return nil
 }
-

@@ -37,7 +37,7 @@ func TestAuthServiceLogin(t *testing.T) {
 		EnablePhoneLogin:        true,
 		EnableEmailRegistration: true,
 		EnablePhoneRegistration: true,
-	}, nil, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore, nil)
 
 	payload, err := svc.Login(context.Background(), "admin", "Admin123!", "")
 	if err != nil {
@@ -71,7 +71,7 @@ func TestAuthServiceLoginInvalidPassword(t *testing.T) {
 		EnablePhoneLogin:        true,
 		EnableEmailRegistration: true,
 		EnablePhoneRegistration: true,
-	}, nil, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore, nil)
 
 	_, err := svc.Login(context.Background(), "admin", "bad-password", "")
 	if !errors.Is(err, utils.ErrInvalidCredential) {
@@ -100,7 +100,7 @@ func TestAuthServiceLoginByEmail(t *testing.T) {
 		RefreshTTL: 24 * time.Hour,
 	}, config.AuthConfig{
 		EnableEmailLogin: true,
-	}, nil, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore, nil)
 
 	payload, err := svc.Login(context.Background(), "admin@example.com", "Admin123!", "email")
 	if err != nil {
@@ -122,7 +122,7 @@ func TestAuthServiceRegisterByPhone(t *testing.T) {
 	}, config.AuthConfig{
 		EnablePhoneLogin:        true,
 		EnablePhoneRegistration: true,
-	}, nil, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore, nil)
 
 	payload, err := svc.Register(context.Background(), RegisterInput{
 		Account:      "18800001111",
@@ -154,7 +154,7 @@ func TestAuthServiceRegisterByEmailDisabled(t *testing.T) {
 	}, config.AuthConfig{
 		EnableEmailLogin:        true,
 		EnableEmailRegistration: false,
-	}, nil, userRepo, tokenStore)
+	}, nil, userRepo, tokenStore, nil)
 
 	_, err := svc.Register(context.Background(), RegisterInput{
 		Account:      "user@example.com",
@@ -188,7 +188,7 @@ func TestAuthServiceUpdateProfileAvatar(t *testing.T) {
 		Secret:     "secret",
 		AccessTTL:  time.Hour,
 		RefreshTTL: 24 * time.Hour,
-	}, config.AuthConfig{}, nil, userRepo, tokenStore)
+	}, config.AuthConfig{}, nil, userRepo, tokenStore, nil)
 
 	profile, err := svc.UpdateProfile(context.Background(), 1, UpdateProfileInput{Avatar: "default-05"})
 	if err != nil {
