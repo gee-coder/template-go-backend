@@ -14,7 +14,8 @@ INSERT INTO `menus` (
   (7, NOW(3), NOW(3), 2, 'menu', '菜单管理', '/system/menus', 'views/system/menus/index.vue', 'Menu', 'menu', 'system:menu:view', 5, 0, 'enabled'),
   (8, NOW(3), NOW(3), 2, 'menu_write', '菜单写入', '', '', '', 'button', 'system:menu:write', 6, 0, 'enabled'),
   (9, NOW(3), NOW(3), 2, 'auth_setting', '认证设置', '/system/auth-settings', 'views/system/auth-settings/index.vue', 'Setting', 'menu', 'system:auth-setting:view', 7, 0, 'enabled'),
-  (10, NOW(3), NOW(3), 2, 'auth_setting_write', '认证设置写入', '', '', '', 'button', 'system:auth-setting:write', 8, 0, 'enabled')
+  (10, NOW(3), NOW(3), 2, 'auth_setting_write', '认证设置写入', '', '', '', 'button', 'system:auth-setting:write', 8, 0, 'enabled'),
+  (11, NOW(3), NOW(3), 2, 'login_audit', '登录审计', '/system/login-audits', 'views/system/login-audits/index.vue', 'Document', 'menu', 'system:login-audit:view', 9, 0, 'enabled')
 ON DUPLICATE KEY UPDATE
   `updated_at` = VALUES(`updated_at`),
   `parent_id` = VALUES(`parent_id`),
@@ -65,6 +66,7 @@ INSERT IGNORE INTO `role_menus` (`role_id`, `menu_id`) VALUES
   (1, 7),
   (1, 8),
   (1, 9),
-  (1, 10);
+  (1, 10),
+  (1, 11);
 
 COMMIT;

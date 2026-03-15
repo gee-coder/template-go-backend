@@ -63,6 +63,26 @@ CREATE TABLE IF NOT EXISTS `auth_settings` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `login_audit_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `username` varchar(64) DEFAULT NULL,
+  `account` varchar(128) NOT NULL,
+  `login_type` varchar(32) NOT NULL,
+  `status` varchar(32) NOT NULL,
+  `ip` varchar(64) DEFAULT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `message` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_login_audit_logs_user_id` (`user_id`),
+  KEY `idx_login_audit_logs_username` (`username`),
+  KEY `idx_login_audit_logs_account` (`account`),
+  KEY `idx_login_audit_logs_login_type` (`login_type`),
+  KEY `idx_login_audit_logs_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `user_roles` (
   `user_id` bigint unsigned NOT NULL,
   `role_id` bigint unsigned NOT NULL,

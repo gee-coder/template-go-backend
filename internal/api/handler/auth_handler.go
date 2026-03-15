@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gee-coder/template-go-backend/internal/api/middleware"
 	"github.com/gee-coder/template-go-backend/internal/api/request"
@@ -12,12 +13,16 @@ import (
 
 // AuthHandler handles auth APIs.
 type AuthHandler struct {
-	authService AuthService
+	authService       AuthService
+	loginAuditService LoginAuditService
 }
 
 // NewAuthHandler creates an auth handler.
-func NewAuthHandler(authService AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService) *AuthHandler {
+	return &AuthHandler{
+		authService:       authService,
+		loginAuditService: loginAuditService,
+	}
 }
 
 // ResolvePermissions resolves the current user permissions.
@@ -37,12 +42,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if account == "" {
 		account = req.Username
 	}
+	account = strings.TrimSpace(account)
 	if account == "" {
 		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required"))
 		return
 	}
 
 	payload, err := h.authService.Login(c.Request.Context(), account, req.Password, req.LoginType)
+	h.writeLoginAudit(c, account, req.LoginType, payload, err)
 	if err != nil {
 		utils.RespondError(c, err)
 		return
@@ -138,4 +145,60 @@ func (h *AuthHandler) Options(c *gin.Context) {
 		return
 	}
 	utils.RespondOK(c, options)
+}
+
+func (h *AuthHandler) writeLoginAudit(c *gin.Context, account string, requestedType string, payload *service.TokenPayload, loginErr error) {
+	if h.loginAuditService == nil {
+		return
+	}
+
+	input := service.CreateLoginAuditInput{
+		Account:   account,
+		LoginType: inferLoginAuditType(requestedType, account),
+		IP:        c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		Status:    "success",
+		Message:   "login success",
+	}
+
+	if payload != nil && payload.User != nil {
+		input.UserID = &payload.User.ID
+		input.Username = payload.User.Username
+	}
+	if loginErr != nil {
+		input.Status = "failure"
+		input.Message = loginErr.Error()
+	}
+
+	_ = h.loginAuditService.Create(c.Request.Context(), input)
+}
+
+func inferLoginAuditType(requestedType string, account string) string {
+	requestedType = strings.TrimSpace(requestedType)
+	switch requestedType {
+	case "email", "phone", "username":
+		return requestedType
+	}
+
+	account = strings.TrimSpace(account)
+	if account == "" {
+		return "username"
+	}
+	if strings.Contains(account, "@") {
+		return "email"
+	}
+
+	normalized := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "", "+", "").Replace(account)
+	isPhone := true
+	for _, char := range normalized {
+		if char < '0' || char > '9' {
+			isPhone = false
+			break
+		}
+	}
+	if isPhone && len(normalized) >= 6 {
+		return "phone"
+	}
+
+	return "username"
 }

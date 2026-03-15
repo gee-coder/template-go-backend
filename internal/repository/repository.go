@@ -19,6 +19,13 @@ type UserFilter struct {
 	Status  string
 }
 
+// LoginAuditFilter defines login audit list filters.
+type LoginAuditFilter struct {
+	Keyword   string
+	Status    string
+	LoginType string
+}
+
 // RoleFilter defines role list filters.
 type RoleFilter struct {
 	Keyword string
@@ -48,6 +55,12 @@ type UserRepository interface {
 type AuthSettingRepository interface {
 	Get(ctx context.Context) (*model.AuthSetting, error)
 	Save(ctx context.Context, setting *model.AuthSetting) error
+}
+
+// LoginAuditRepository defines data access of login audit logs.
+type LoginAuditRepository interface {
+	Create(ctx context.Context, item *model.LoginAuditLog) error
+	List(ctx context.Context, filter LoginAuditFilter) ([]model.LoginAuditLog, error)
 }
 
 // RoleRepository defines data access of roles.

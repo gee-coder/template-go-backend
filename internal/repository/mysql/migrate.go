@@ -16,6 +16,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.Role{},
 		&model.Menu{},
 		&model.AuthSetting{},
+		&model.LoginAuditLog{},
 		&model.UserRole{},
 		&model.RoleMenu{},
 		&model.ContactSubmission{},
@@ -101,6 +102,7 @@ func SeedInitialData(ctx context.Context, userRepo repository.UserRepository, ro
 		{ParentID: systemMenu.ID, Name: "menu_write", Title: "菜单写入", Type: "button", Permission: "system:menu:write", Sort: 6, Status: "enabled"},
 		{ParentID: systemMenu.ID, Name: "auth_setting", Title: "认证设置", Path: "/system/auth-settings", Component: "views/system/auth-settings/index.vue", Type: "menu", Icon: "Setting", Permission: "system:auth-setting:view", Sort: 7, Status: "enabled"},
 		{ParentID: systemMenu.ID, Name: "auth_setting_write", Title: "认证设置写入", Type: "button", Permission: "system:auth-setting:write", Sort: 8, Status: "enabled"},
+		{ParentID: systemMenu.ID, Name: "login_audit", Title: "登录审计", Path: "/system/login-audits", Component: "views/system/login-audits/index.vue", Type: "menu", Icon: "Document", Permission: "system:login-audit:view", Sort: 9, Status: "enabled"},
 	}
 
 	requiredMenus := []model.Menu{*dashboardMenu, *systemMenu}

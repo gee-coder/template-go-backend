@@ -26,6 +26,12 @@ type AuthSettingService interface {
 	Update(ctx context.Context, input service.UpdateAuthSettingInput) (service.AuthOptions, error)
 }
 
+// LoginAuditService is the login audit handler dependency contract.
+type LoginAuditService interface {
+	Create(ctx context.Context, input service.CreateLoginAuditInput) error
+	List(ctx context.Context, filter repository.LoginAuditFilter) ([]model.LoginAuditLog, error)
+}
+
 // UserService is the user handler dependency contract.
 type UserService interface {
 	List(ctx context.Context, filter repository.UserFilter) ([]model.User, error)

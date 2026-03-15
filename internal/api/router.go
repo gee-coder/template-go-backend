@@ -15,6 +15,7 @@ type HandlerSet struct {
 	Health      *handler.HealthHandler
 	Auth        *handler.AuthHandler
 	AuthSetting *handler.AuthSettingHandler
+	LoginAudit  *handler.LoginAuditHandler
 	User        *handler.UserHandler
 	Role        *handler.RoleHandler
 	Menu        *handler.MenuHandler
@@ -25,6 +26,7 @@ type HandlerSet struct {
 func NewHandlerSet(
 	auth handler.AuthService,
 	authSetting handler.AuthSettingService,
+	loginAudit handler.LoginAuditService,
 	user handler.UserService,
 	role handler.RoleService,
 	menu handler.MenuService,
@@ -32,8 +34,9 @@ func NewHandlerSet(
 ) *HandlerSet {
 	return &HandlerSet{
 		Health:      handler.NewHealthHandler(),
-		Auth:        handler.NewAuthHandler(auth),
+		Auth:        handler.NewAuthHandler(auth, loginAudit),
 		AuthSetting: handler.NewAuthSettingHandler(authSetting),
+		LoginAudit:  handler.NewLoginAuditHandler(loginAudit),
 		User:        handler.NewUserHandler(user),
 		Role:        handler.NewRoleHandler(role),
 		Menu:        handler.NewMenuHandler(menu),
@@ -90,6 +93,7 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, handlers *HandlerSet) *gi
 
 	system.GET("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:view"), handlers.AuthSetting.Get)
 	system.PUT("/auth-settings", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:auth-setting:write"), handlers.AuthSetting.Update)
+	system.GET("/login-audits", middleware.PermissionGuard(handlers.Auth.ResolvePermissions, "system:login-audit:view"), handlers.LoginAudit.List)
 
 	return router
 }
