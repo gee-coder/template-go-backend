@@ -3,19 +3,23 @@ module github.com/gee-coder/template-go-backend
 go 1.22.10
 
 require (
+	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.4.0
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.25.9+incompatible
+	github.com/minio/minio-go/v7 v7.0.83
 	github.com/redis/go-redis/v9 v9.7.1
 	github.com/spf13/viper v1.18.2
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.33.0
-	gorm.io/driver/mysql v1.5.7
-	gorm.io/gorm v1.25.12
+	gorm.io/driver/mysql v1.6.0
+	gorm.io/gorm v1.30.0
 )
 
 require (
-	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.4.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
@@ -27,11 +31,9 @@ require (
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.27.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.25.9+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -41,7 +43,6 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.83 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
