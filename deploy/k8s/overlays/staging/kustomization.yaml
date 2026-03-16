@@ -1,0 +1,72 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nex-backend-staging
+
+resources:
+  - ../../base
+
+patches:
+  - path: app-configmap-patch.yaml
+  - path: app-secret-patch.yaml
+  - path: ingress-patch.yaml
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: public-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 2
+        maxReplicas: 4
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: auth-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 2
+        maxReplicas: 4
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: system-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: backend-gateway
+        namespace: nex-backend
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
+
+images:
+  - name: ghcr.io/gee-coder/template-go-backend-bootstrap
+    newName: ghcr.io/gee-coder/template-go-backend-bootstrap
+    newTag: latest
+  - name: ghcr.io/gee-coder/template-go-backend-public-api
+    newName: ghcr.io/gee-coder/template-go-backend-public-api
+    newTag: latest
+  - name: ghcr.io/gee-coder/template-go-backend-auth-api
+    newName: ghcr.io/gee-coder/template-go-backend-auth-api
+    newTag: latest
+  - name: ghcr.io/gee-coder/template-go-backend-system-api
+    newName: ghcr.io/gee-coder/template-go-backend-system-api
+    newTag: latest
+
+replicas:
+  - name: public-api
+    count: 2
+  - name: auth-api
+    count: 2
+  - name: system-api
+    count: 1
+  - name: backend-gateway
+    count: 1

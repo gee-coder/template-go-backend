@@ -52,6 +52,8 @@ The repository also includes `.github/workflows/docker-images.yml`, which publis
 
 For a production-friendly layout with image tag overrides, external dependency endpoints, and replica tuning, start from `deploy/k8s/overlays/production`.
 
+For shared QA or pre-release validation, use `deploy/k8s/overlays/staging`.
+
 ## Apply order
 
 Apply the resources in two steps so the database bootstrap finishes before the API Deployments start:

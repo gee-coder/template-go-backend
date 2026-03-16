@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-gateway
+  namespace: nex-backend
+spec:
+  rules:
+    - host: api-staging.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-gateway
+                port:
+                  number: 8080

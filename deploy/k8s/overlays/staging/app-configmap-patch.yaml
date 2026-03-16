@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-app-config
+  namespace: nex-backend
+data:
+  APP_APP_ENV: staging
+  APP_APP_DEBUG: "false"
+  APP_AUTH_ENABLETWOFACTOR: "false"
+  APP_REDIS_ADDR: redis-staging.example.internal:6379
+  APP_STORAGE_PROVIDER: minio
+  APP_STORAGE_MINIO_ENDPOINT: minio-staging.example.internal:9000
+  APP_STORAGE_MINIO_PUBLICBASEURL: https://assets-staging.example.com/nex-assets
+  APP_STORAGE_MINIO_ROOTPATH: template/staging
+  APP_SMS_PROVIDER: mock
+  APP_MAIL_PROVIDER: mock
+  APP_MAIL_FROMNAME: Nex Console Staging
+  APP_MAIL_FROMADDRESS: no-reply-staging@example.com

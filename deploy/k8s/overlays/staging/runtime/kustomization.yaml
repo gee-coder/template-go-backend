@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: nex-backend
+namespace: nex-backend-staging
 
 resources:
   - ../../../base
@@ -14,21 +14,18 @@ patches:
         name: backend-app-config
         namespace: nex-backend
       data:
-        APP_APP_ENV: production
+        APP_APP_ENV: staging
         APP_APP_DEBUG: "false"
-        APP_AUTH_ENABLETWOFACTOR: "true"
-        APP_REDIS_ADDR: redis-prod.example.internal:6379
+        APP_AUTH_ENABLETWOFACTOR: "false"
+        APP_REDIS_ADDR: redis-staging.example.internal:6379
         APP_STORAGE_PROVIDER: minio
-        APP_STORAGE_MINIO_ENDPOINT: minio-prod.example.internal:9000
-        APP_STORAGE_MINIO_PUBLICBASEURL: https://assets.example.com/nex-assets
-        APP_STORAGE_MINIO_ROOTPATH: template/production
+        APP_STORAGE_MINIO_ENDPOINT: minio-staging.example.internal:9000
+        APP_STORAGE_MINIO_PUBLICBASEURL: https://assets-staging.example.com/nex-assets
+        APP_STORAGE_MINIO_ROOTPATH: template/staging
         APP_SMS_PROVIDER: mock
-        APP_MAIL_PROVIDER: smtp
-        APP_MAIL_FROMNAME: Nex Console
-        APP_MAIL_FROMADDRESS: no-reply@example.com
-        APP_MAIL_SMTP_HOST: smtp.example.com
-        APP_MAIL_SMTP_PORT: "587"
-        APP_MAIL_SMTP_USETLS: "true"
+        APP_MAIL_PROVIDER: mock
+        APP_MAIL_FROMNAME: Nex Console Staging
+        APP_MAIL_FROMADDRESS: no-reply-staging@example.com
   - patch: |-
       apiVersion: v1
       kind: Secret
@@ -37,28 +34,20 @@ patches:
         namespace: nex-backend
       type: Opaque
       stringData:
-        APP_DATABASE_DSN: nex:replace_me@tcp(mysql-prod.example.internal:3306)/nex_template?charset=utf8mb4&parseTime=True&loc=Local
-        APP_REDIS_PASSWORD: replace-me
-        APP_JWT_SECRET: replace-with-a-strong-random-secret
+        APP_DATABASE_DSN: nex:replace_me@tcp(mysql-staging.example.internal:3306)/nex_template?charset=utf8mb4&parseTime=True&loc=Local
+        APP_REDIS_PASSWORD: ""
+        APP_JWT_SECRET: replace-with-a-staging-secret
         APP_STORAGE_MINIO_ACCESSKEYID: replace-me
         APP_STORAGE_MINIO_ACCESSKEYSECRET: replace-me
-        APP_MAIL_SMTP_USERNAME: no-reply@example.com
-        APP_MAIL_SMTP_PASSWORD: replace-me
   - patch: |-
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
         name: backend-gateway
         namespace: nex-backend
-        annotations:
-          nginx.ingress.kubernetes.io/proxy-body-size: 10m
       spec:
-        tls:
-          - hosts:
-              - api.example.com
-            secretName: backend-gateway-tls
         rules:
-          - host: api.example.com
+          - host: api-staging.example.com
             http:
               paths:
                 - path: /
@@ -68,6 +57,42 @@ patches:
                       name: backend-gateway
                       port:
                         number: 8080
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: public-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 2
+        maxReplicas: 4
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: auth-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 2
+        maxReplicas: 4
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: system-api
+        namespace: nex-backend
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: backend-gateway
+        namespace: nex-backend
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
   - patch: |-
       $patch: delete
       apiVersion: batch/v1
@@ -89,10 +114,10 @@ images:
 
 replicas:
   - name: public-api
-    count: 3
+    count: 2
   - name: auth-api
-    count: 3
+    count: 2
   - name: system-api
-    count: 2
+    count: 1
   - name: backend-gateway
-    count: 2
+    count: 1
