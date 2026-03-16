@@ -219,15 +219,18 @@ func TestAuthServiceRegisterByPhone(t *testing.T) {
 	userRepo := &fakeUserRepository{users: map[string]*model.User{}}
 	tokenStore := &fakeTokenStore{tokens: map[string]uint{}}
 	smsService := &fakeSMSVerificationService{}
+	captchaService := &fakeImageCaptchaService{}
 	svc := NewAuthService(newTestJWTConfig(), config.AuthConfig{
 		EnablePhoneRegistration: true,
-	}, nil, userRepo, tokenStore, nil, smsService, &fakeEmailVerificationService{}, &fakeImageCaptchaService{}, nil)
+	}, nil, userRepo, tokenStore, nil, smsService, &fakeEmailVerificationService{}, captchaService, nil)
 
 	payload, err := svc.Register(context.Background(), RegisterInput{
-		Account:      "18800001111",
-		RegisterType: "phone",
-		Password:     "Admin123!",
-		SMSCode:      "123456",
+		Account:          "18800001111",
+		RegisterType:     "phone",
+		Password:         "Admin123!",
+		VerificationCode: "123456",
+		CaptchaID:        "captcha_4",
+		CaptchaCode:      "PHONE",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -237,6 +240,43 @@ func TestAuthServiceRegisterByPhone(t *testing.T) {
 	}
 	if !isSupportedAvatarKey(payload.User.Avatar) {
 		t.Fatalf("expected default avatar to be assigned, got %s", payload.User.Avatar)
+	}
+	if len(smsService.verified) != 1 || smsService.verified[0].Purpose != "register" {
+		t.Fatalf("expected phone register verification to run, got %+v", smsService.verified)
+	}
+	if len(captchaService.verified) != 1 {
+		t.Fatalf("expected register captcha verification to run")
+	}
+}
+
+func TestAuthServiceRegisterByEmailRequiresCodeAndCaptcha(t *testing.T) {
+	userRepo := &fakeUserRepository{users: map[string]*model.User{}}
+	tokenStore := &fakeTokenStore{tokens: map[string]uint{}}
+	emailService := &fakeEmailVerificationService{}
+	captchaService := &fakeImageCaptchaService{}
+	svc := NewAuthService(newTestJWTConfig(), config.AuthConfig{
+		EnableEmailRegistration: true,
+	}, nil, userRepo, tokenStore, nil, &fakeSMSVerificationService{}, emailService, captchaService, nil)
+
+	payload, err := svc.Register(context.Background(), RegisterInput{
+		Account:          "newuser@example.com",
+		RegisterType:     "email",
+		Password:         "Admin123!",
+		VerificationCode: "654321",
+		CaptchaID:        "captcha_5",
+		CaptchaCode:      "EMAIL",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if payload.User.Email != "newuser@example.com" {
+		t.Fatalf("expected email to be persisted, got %s", payload.User.Email)
+	}
+	if len(emailService.verified) != 1 || emailService.verified[0].Purpose != "register" {
+		t.Fatalf("expected email register verification to run, got %+v", emailService.verified)
+	}
+	if len(captchaService.verified) != 1 {
+		t.Fatalf("expected register captcha verification to run")
 	}
 }
 

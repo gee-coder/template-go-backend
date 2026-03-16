@@ -89,11 +89,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	payload, err := h.authService.Register(c.Request.Context(), service.RegisterInput{
-		Account:      req.Account,
-		RegisterType: req.RegisterType,
-		Nickname:     req.Nickname,
-		Password:     req.Password,
-		SMSCode:      req.SMSCode,
+		Account:          req.Account,
+		RegisterType:     req.RegisterType,
+		Nickname:         req.Nickname,
+		Password:         req.Password,
+		VerificationCode: req.VerificationCode,
+		CaptchaID:        req.CaptchaID,
+		CaptchaCode:      req.CaptchaCode,
+		SMSCode:          req.SMSCode,
 	})
 	if err != nil {
 		utils.RespondError(c, err)

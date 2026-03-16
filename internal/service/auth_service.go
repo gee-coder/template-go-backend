@@ -72,11 +72,14 @@ type LoginInput struct {
 
 // RegisterInput describes the public register payload.
 type RegisterInput struct {
-	Account      string
-	RegisterType string
-	Nickname     string
-	Password     string
-	SMSCode      string
+	Account          string
+	RegisterType     string
+	Nickname         string
+	Password         string
+	VerificationCode string
+	CaptchaID        string
+	CaptchaCode      string
+	SMSCode          string
 }
 
 // SendTwoFactorCodeInput describes the two-factor send-code payload.
@@ -233,6 +236,12 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		if !isValidEmail(email) {
 			return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid email address")
 		}
+		if err := s.verifyImageCaptcha(ctx, input.CaptchaID, input.CaptchaCode); err != nil {
+			return nil, err
+		}
+		if err := s.verifyEmailCode(ctx, email, "register", registerVerificationCode(input)); err != nil {
+			return nil, err
+		}
 		if err := ensureEmailAvailable(ctx, s.userRepo, email); err != nil {
 			return nil, err
 		}
@@ -246,7 +255,10 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		if !isValidPhone(phone) {
 			return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
 		}
-		if err := s.verifyPhoneCode(ctx, phone, "register", input.SMSCode); err != nil {
+		if err := s.verifyImageCaptcha(ctx, input.CaptchaID, input.CaptchaCode); err != nil {
+			return nil, err
+		}
+		if err := s.verifyPhoneCode(ctx, phone, "register", registerVerificationCode(input)); err != nil {
 			return nil, err
 		}
 		if err := ensurePhoneAvailable(ctx, s.userRepo, phone); err != nil {
@@ -863,4 +875,11 @@ func defaultNickname(registerType string, account string, nickname string) strin
 	}
 
 	return "new_user"
+}
+
+func registerVerificationCode(input RegisterInput) string {
+	if strings.TrimSpace(input.VerificationCode) != "" {
+		return input.VerificationCode
+	}
+	return input.SMSCode
 }
