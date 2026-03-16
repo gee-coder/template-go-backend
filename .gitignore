@@ -6,6 +6,7 @@ coverage.out
 dist/
 tmp/
 .env
+.env.docker
 .env.local
 *.log
 docs/swagger.json
