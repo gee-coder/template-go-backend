@@ -1,11 +1,13 @@
 # Kubernetes Deployment
 
-This directory contains a minimal Kubernetes deployment layout for the split backend services:
+This directory contains a minimal Kubernetes deployment layout for the split backend services.
 
-- `bootstrap-job.yaml`
-- `runtime.yaml`
-- `hpa.yaml`
-- `ingress.yaml`
+Base manifests live under `deploy/k8s/base`:
+
+- `base/bootstrap-job.yaml`
+- `base/runtime.yaml`
+- `base/hpa.yaml`
+- `base/ingress.yaml`
 
 It assumes MySQL, Redis, and object storage already exist and are reachable from the cluster.
 
@@ -13,9 +15,9 @@ It assumes MySQL, Redis, and object storage already exist and are reachable from
 
 Before applying the manifests, replace at least these values in:
 
-- `app-secret.yaml`
-- `app-configmap.yaml`
-- `ingress.yaml`
+- `base/app-secret.yaml`
+- `base/app-configmap.yaml`
+- `base/ingress.yaml`
 
 Important fields:
 
@@ -48,20 +50,22 @@ Add `-Push` if you want the script to push them after build.
 
 The repository also includes `.github/workflows/docker-images.yml`, which publishes the four runtime images to GHCR on every push to `master` or `main`.
 
+For a production-friendly layout with image tag overrides, external dependency endpoints, and replica tuning, start from `deploy/k8s/overlays/production`.
+
 ## Apply order
 
 Apply the resources in two steps so the database bootstrap finishes before the API Deployments start:
 
 ```powershell
-kubectl apply -f deploy/k8s/namespace.yaml
-kubectl apply -f deploy/k8s/app-configmap.yaml
-kubectl apply -f deploy/k8s/app-secret.yaml
-kubectl apply -f deploy/k8s/gateway-configmap.yaml
-kubectl apply -f deploy/k8s/bootstrap-job.yaml
+kubectl apply -f deploy/k8s/base/namespace.yaml
+kubectl apply -f deploy/k8s/base/app-configmap.yaml
+kubectl apply -f deploy/k8s/base/app-secret.yaml
+kubectl apply -f deploy/k8s/base/gateway-configmap.yaml
+kubectl apply -f deploy/k8s/base/bootstrap-job.yaml
 kubectl wait --for=condition=complete job/backend-bootstrap -n nex-backend --timeout=300s
-kubectl apply -f deploy/k8s/runtime.yaml
-kubectl apply -f deploy/k8s/hpa.yaml
-kubectl apply -f deploy/k8s/ingress.yaml
+kubectl apply -f deploy/k8s/base/runtime.yaml
+kubectl apply -f deploy/k8s/base/hpa.yaml
+kubectl apply -f deploy/k8s/base/ingress.yaml
 ```
 
 ## Scaling

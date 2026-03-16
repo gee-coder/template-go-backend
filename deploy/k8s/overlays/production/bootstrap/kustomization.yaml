@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nex-backend
+
+resources:
+  - ../../../base
+
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: backend-app-config
+        namespace: nex-backend
+      data:
+        APP_APP_ENV: production
+        APP_APP_DEBUG: "false"
+        APP_AUTH_ENABLETWOFACTOR: "true"
+        APP_REDIS_ADDR: redis-prod.example.internal:6379
+        APP_STORAGE_PROVIDER: minio
+        APP_STORAGE_MINIO_ENDPOINT: minio-prod.example.internal:9000
+        APP_STORAGE_MINIO_PUBLICBASEURL: https://assets.example.com/nex-assets
+        APP_STORAGE_MINIO_ROOTPATH: template/production
+        APP_SMS_PROVIDER: mock
+        APP_MAIL_PROVIDER: smtp
+        APP_MAIL_FROMNAME: Nex Console
+        APP_MAIL_FROMADDRESS: no-reply@example.com
+        APP_MAIL_SMTP_HOST: smtp.example.com
+        APP_MAIL_SMTP_PORT: "587"
+        APP_MAIL_SMTP_USETLS: "true"
+  - patch: |-
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: backend-app-secret
+        namespace: nex-backend
+      type: Opaque
+      stringData:
+        APP_DATABASE_DSN: nex:replace_me@tcp(mysql-prod.example.internal:3306)/nex_template?charset=utf8mb4&parseTime=True&loc=Local
+        APP_REDIS_PASSWORD: replace-me
+        APP_JWT_SECRET: replace-with-a-strong-random-secret
+        APP_STORAGE_MINIO_ACCESSKEYID: replace-me
+        APP_STORAGE_MINIO_ACCESSKEYSECRET: replace-me
+        APP_MAIL_SMTP_USERNAME: no-reply@example.com
+        APP_MAIL_SMTP_PASSWORD: replace-me
+
+images:
+  - name: ghcr.io/gee-coder/template-go-backend-bootstrap
+    newName: ghcr.io/gee-coder/template-go-backend-bootstrap
+    newTag: latest
