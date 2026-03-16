@@ -1,6 +1,6 @@
 module github.com/gee-coder/template-go-backend
 
-go 1.22.10
+go 1.25.8
 
 require (
 	github.com/gin-gonic/gin v1.9.1

@@ -1,7 +1,7 @@
 # template-go-backend
 
 ![CI](https://github.com/gee-coder/template-go-backend/actions/workflows/ci.yml/badge.svg)
-![Go](https://img.shields.io/badge/Go-1.22.10-00ADD8?logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.25.8-00ADD8?logo=go&logoColor=white)
 ![Gin](https://img.shields.io/badge/Gin-1.9.1-008ECF)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0.45-4479A1?logo=mysql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.2.13-DC382D?logo=redis&logoColor=white)
@@ -34,7 +34,7 @@
 
 ## 技术版本
 
-- Go `1.22.10`
+- Go `1.25.8`
 - Gin `1.9.1`
 - GORM `1.25.12`
 - Viper `1.18.2`
@@ -111,7 +111,7 @@ flowchart TD
 
 ### 1. 环境准备
 
-- 安装 Go `1.22.10`
+- 安装 Go `1.25.8`
 - 安装 Docker Desktop
 - 准备 MySQL `8.0.45` 和 Redis `7.2.13`
 
