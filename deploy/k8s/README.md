@@ -54,6 +54,8 @@ For a production-friendly layout with image tag overrides, external dependency e
 
 For shared QA or pre-release validation, use `deploy/k8s/overlays/staging`.
 
+For day-2 operations, see `deploy/k8s/RELEASE.md` for the standard release and rollback flow.
+
 ## Apply order
 
 Apply the resources in two steps so the database bootstrap finishes before the API Deployments start:
