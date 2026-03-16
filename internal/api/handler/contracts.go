@@ -10,7 +10,7 @@ import (
 
 // AuthService is the auth handler dependency contract.
 type AuthService interface {
-	Login(ctx context.Context, account string, password string, loginType string) (*service.TokenPayload, error)
+	Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*service.TokenPayload, error)
 	Register(ctx context.Context, input service.RegisterInput) (*service.TokenPayload, error)
 	Refresh(ctx context.Context, refreshToken string) (*service.TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error

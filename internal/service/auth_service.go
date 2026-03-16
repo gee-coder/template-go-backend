@@ -62,6 +62,7 @@ type RegisterInput struct {
 	RegisterType string
 	Nickname     string
 	Password     string
+	SMSCode      string
 }
 
 // UpdateProfileInput describes self profile updates.
@@ -71,7 +72,7 @@ type UpdateProfileInput struct {
 
 // AuthService provides auth capabilities.
 type AuthService interface {
-	Login(ctx context.Context, account string, password string, loginType string) (*TokenPayload, error)
+	Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*TokenPayload, error)
 	Register(ctx context.Context, input RegisterInput) (*TokenPayload, error)
 	Refresh(ctx context.Context, refreshToken string) (*TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
@@ -89,6 +90,11 @@ type authService struct {
 	tokenRepo          repository.TokenStore
 	cache              repository.CacheStore
 	avatarURLValidator func(string) bool
+	smsVerifier        smsCodeVerifier
+}
+
+type smsCodeVerifier interface {
+	VerifyCode(ctx context.Context, input VerifySMSCodeInput) error
 }
 
 // NewAuthService creates the auth service.
@@ -99,6 +105,7 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenStore,
 	cache repository.CacheStore,
+	smsVerifier smsCodeVerifier,
 	avatarURLValidator func(string) bool,
 ) AuthService {
 	return &authService{
@@ -108,17 +115,18 @@ func NewAuthService(
 		userRepo:           userRepo,
 		tokenRepo:          tokenRepo,
 		cache:              cache,
+		smsVerifier:        smsVerifier,
 		avatarURLValidator: avatarURLValidator,
 	}
 }
 
-func (s *authService) Login(ctx context.Context, account string, password string, loginType string) (*TokenPayload, error) {
+func (s *authService) Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*TokenPayload, error) {
 	options, err := s.Options(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := s.findUserForLogin(ctx, account, loginType, options)
+	user, resolvedLoginType, err := s.findUserForLogin(ctx, account, loginType, options)
 	if err != nil {
 		if errors.Is(err, utils.ErrNotFound) {
 			return nil, utils.ErrInvalidCredential
@@ -131,6 +139,11 @@ func (s *authService) Login(ctx context.Context, account string, password string
 	}
 	if user.Status != "enabled" {
 		return nil, utils.ErrForbidden
+	}
+	if resolvedLoginType == "phone" {
+		if err := s.verifyPhoneCode(ctx, user.Phone, "login", smsCode); err != nil {
+			return nil, err
+		}
 	}
 
 	return s.issueTokens(ctx, user)
@@ -179,6 +192,9 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 		phone := normalizePhone(input.Account)
 		if !isValidPhone(phone) {
 			return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
+		}
+		if err := s.verifyPhoneCode(ctx, phone, "register", input.SMSCode); err != nil {
+			return nil, err
 		}
 		if err := ensurePhoneAvailable(ctx, s.userRepo, phone); err != nil {
 			return nil, err
@@ -418,47 +434,50 @@ func normalizeAuthOptions(options AuthOptions) AuthOptions {
 	return options
 }
 
-func (s *authService) findUserForLogin(ctx context.Context, account string, loginType string, options AuthOptions) (*model.User, error) {
+func (s *authService) findUserForLogin(ctx context.Context, account string, loginType string, options AuthOptions) (*model.User, string, error) {
 	account = strings.TrimSpace(account)
 	if account == "" {
-		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required")
+		return nil, "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required")
 	}
 
 	switch strings.TrimSpace(loginType) {
 	case "username":
-		return s.userRepo.GetByUsername(ctx, account)
+		user, err := s.userRepo.GetByUsername(ctx, account)
+		return user, "username", err
 	case "email":
 		if !options.EnableEmailLogin {
-			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "email login is disabled")
+			return nil, "", utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "email login is disabled")
 		}
 		email := normalizeEmail(account)
 		if !isValidEmail(email) {
-			return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid email address")
+			return nil, "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid email address")
 		}
-		return s.userRepo.GetByEmail(ctx, email)
+		user, err := s.userRepo.GetByEmail(ctx, email)
+		return user, "email", err
 	case "phone":
 		if !options.EnablePhoneLogin {
-			return nil, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "phone login is disabled")
+			return nil, "", utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "phone login is disabled")
 		}
 		phone := normalizePhone(account)
 		if !isValidPhone(phone) {
-			return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
+			return nil, "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
 		}
-		return s.userRepo.GetByPhone(ctx, phone)
+		user, err := s.userRepo.GetByPhone(ctx, phone)
+		return user, "phone", err
 	case "":
 		return s.findUserByFallback(ctx, account, options)
 	default:
-		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported login type")
+		return nil, "", utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported login type")
 	}
 }
 
-func (s *authService) findUserByFallback(ctx context.Context, account string, options AuthOptions) (*model.User, error) {
+func (s *authService) findUserByFallback(ctx context.Context, account string, options AuthOptions) (*model.User, string, error) {
 	if options.EnableEmailLogin {
 		email := normalizeEmail(account)
 		if isValidEmail(email) {
 			user, err := s.userRepo.GetByEmail(ctx, email)
 			if err == nil || !errors.Is(err, utils.ErrNotFound) {
-				return user, err
+				return user, "email", err
 			}
 		}
 	}
@@ -468,12 +487,30 @@ func (s *authService) findUserByFallback(ctx context.Context, account string, op
 		if isValidPhone(phone) {
 			user, err := s.userRepo.GetByPhone(ctx, phone)
 			if err == nil || !errors.Is(err, utils.ErrNotFound) {
-				return user, err
+				return user, "phone", err
 			}
 		}
 	}
 
-	return s.userRepo.GetByUsername(ctx, account)
+	user, err := s.userRepo.GetByUsername(ctx, account)
+	return user, "username", err
+}
+
+func (s *authService) verifyPhoneCode(ctx context.Context, phone string, purpose string, smsCode string) error {
+	if s.smsVerifier == nil {
+		return utils.NewAppError(http.StatusServiceUnavailable, http.StatusServiceUnavailable, "phone verification is not configured")
+	}
+	if !isValidPhone(normalizePhone(phone)) {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
+	}
+	if strings.TrimSpace(smsCode) == "" {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "sms verification code is required")
+	}
+	return s.smsVerifier.VerifyCode(ctx, VerifySMSCodeInput{
+		Phone:   phone,
+		Purpose: purpose,
+		Code:    smsCode,
+	})
 }
 
 func detectRegisterType(registerType string, account string) string {

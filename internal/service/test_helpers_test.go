@@ -141,6 +141,11 @@ type fakeCacheStore struct {
 	values map[string][]byte
 }
 
+type fakeSMSVerificationService struct {
+	verifyErr error
+	verified  []VerifySMSCodeInput
+}
+
 func (f *fakeTokenStore) Save(ctx context.Context, refreshToken string, userID uint, ttl time.Duration) error {
 	f.tokens[refreshToken] = userID
 	return nil
@@ -196,4 +201,9 @@ func (f *fakeCacheStore) DeleteByPrefix(ctx context.Context, prefix string) erro
 		}
 	}
 	return nil
+}
+
+func (f *fakeSMSVerificationService) VerifyCode(ctx context.Context, input VerifySMSCodeInput) error {
+	f.verified = append(f.verified, input)
+	return f.verifyErr
 }

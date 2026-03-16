@@ -6,6 +6,7 @@ type LoginRequest struct {
 	Username  string `json:"username" binding:"omitempty,min=3,max=128"`
 	LoginType string `json:"loginType" binding:"omitempty,oneof=username email phone"`
 	Password  string `json:"password" binding:"required,min=6,max=64"`
+	SMSCode   string `json:"smsCode" binding:"omitempty,min=4,max=8"`
 }
 
 // RegisterRequest describes the register payload.
@@ -14,6 +15,7 @@ type RegisterRequest struct {
 	RegisterType string `json:"registerType" binding:"omitempty,oneof=email phone"`
 	Nickname     string `json:"nickname" binding:"omitempty,min=2,max=64"`
 	Password     string `json:"password" binding:"required,min=6,max=64"`
+	SMSCode      string `json:"smsCode" binding:"omitempty,min=4,max=8"`
 }
 
 // SendSMSCodeRequest describes the SMS send-code payload.

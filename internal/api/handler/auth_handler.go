@@ -52,7 +52,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	payload, err := h.authService.Login(c.Request.Context(), account, req.Password, req.LoginType)
+	payload, err := h.authService.Login(c.Request.Context(), account, req.Password, req.LoginType, req.SMSCode)
 	h.writeLoginAudit(c, account, req.LoginType, payload, err)
 	if err != nil {
 		utils.RespondError(c, err)
@@ -74,6 +74,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		RegisterType: req.RegisterType,
 		Nickname:     req.Nickname,
 		Password:     req.Password,
+		SMSCode:      req.SMSCode,
 	})
 	if err != nil {
 		utils.RespondError(c, err)

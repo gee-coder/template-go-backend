@@ -91,7 +91,7 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 	}
 
 	avatarAssetService := service.NewAvatarAssetService(objectStorage)
-	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore, objectStorage.SupportsPublicURL)
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore, smsVerificationService, objectStorage.SupportsPublicURL)
 	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo, cacheStore)
 	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, objectStorage, cacheStore)
 	loginAuditService := service.NewLoginAuditService(loginAuditRepo)
