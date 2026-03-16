@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-app-config
+  namespace: nex-backend
+data:
+  APP_CONFIG: /app/configs/config.docker.yaml
+  APP_APP_NAME: template-go-backend
+  APP_APP_ENV: k8s
+  APP_APP_DEBUG: "false"
+  APP_APP_UPLOADDIR: ./storage/uploads
+  APP_AUTH_ENABLEEMAILLOGIN: "true"
+  APP_AUTH_ENABLEPHONELOGIN: "true"
+  APP_AUTH_ENABLEEMAILREGISTRATION: "true"
+  APP_AUTH_ENABLEPHONEREGISTRATION: "true"
+  APP_AUTH_ENABLETWOFACTOR: "false"
+  APP_REDIS_ADDR: redis.nex-infra.svc.cluster.local:6379
+  APP_REDIS_DB: "0"
+  APP_REDIS_KEYPREFIX: "nex:template:"
+  APP_JWT_ISSUER: nex-template
+  APP_STORAGE_PROVIDER: minio
+  APP_STORAGE_LOCAL_PUBLICBASEURL: /uploads
+  APP_STORAGE_MINIO_ENDPOINT: minio.nex-infra.svc.cluster.local:9000
+  APP_STORAGE_MINIO_BUCKET: nex-assets
+  APP_STORAGE_MINIO_USESSL: "false"
+  APP_STORAGE_MINIO_PUBLICBASEURL: http://minio-api.example.internal/nex-assets
+  APP_STORAGE_MINIO_ROOTPATH: template/k8s
+  APP_STORAGE_ALIYUNOSS_ENDPOINT: oss-cn-hangzhou.aliyuncs.com
+  APP_STORAGE_ALIYUNOSS_REGION: cn-hangzhou
+  APP_STORAGE_ALIYUNOSS_ROOTPATH: template/k8s
+  APP_STORAGE_HUAWEIOBS_ENDPOINT: https://obs.cn-north-4.myhuaweicloud.com
+  APP_STORAGE_HUAWEIOBS_ROOTPATH: template/k8s
+  APP_SMS_PROVIDER: mock
+  APP_SMS_MOCK_REVEALCODE: "true"
+  APP_SMS_ALIYUN_ENDPOINT: dysmsapi.aliyuncs.com
+  APP_MAIL_PROVIDER: mock
+  APP_MAIL_FROMNAME: Nex Console
+  APP_MAIL_FROMADDRESS: no-reply@example.com
+  APP_MAIL_MOCK_REVEALCODE: "true"
+  APP_MAIL_SMTP_HOST: smtp.example.com
+  APP_MAIL_SMTP_PORT: "587"
+  APP_MAIL_SMTP_USETLS: "true"
