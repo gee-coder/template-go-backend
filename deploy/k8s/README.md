@@ -46,6 +46,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-images.ps1 -Registry gh
 
 Add `-Push` if you want the script to push them after build.
 
+The repository also includes `.github/workflows/docker-images.yml`, which publishes the four runtime images to GHCR on every push to `master` or `main`.
+
 ## Apply order
 
 Apply the resources in two steps so the database bootstrap finishes before the API Deployments start:
