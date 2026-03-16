@@ -10,7 +10,7 @@ COPY . .
 ARG APP_ENTRY=./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/app ${APP_ENTRY}
 
-FROM alpine:3.21
+FROM alpine:3.23
 
 WORKDIR /app
 COPY --from=builder /bin/app /app/app
