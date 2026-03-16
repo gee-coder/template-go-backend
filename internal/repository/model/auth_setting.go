@@ -7,4 +7,5 @@ type AuthSetting struct {
 	EnablePhoneLogin        bool `gorm:"default:true" json:"enablePhoneLogin"`
 	EnableEmailRegistration bool `gorm:"default:true" json:"enableEmailRegistration"`
 	EnablePhoneRegistration bool `gorm:"default:true" json:"enablePhoneRegistration"`
+	EnableTwoFactor         bool `gorm:"default:false" json:"enableTwoFactor"`
 }

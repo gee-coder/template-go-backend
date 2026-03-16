@@ -70,6 +70,12 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 		_ = logger.Sync()
 		return nil, err
 	}
+	emailVerificationService, err := service.NewEmailVerificationService(cfg.Mail, cacheStore, logger)
+	if err != nil {
+		_ = logger.Sync()
+		return nil, err
+	}
+	imageCaptchaService := service.NewImageCaptchaService(cacheStore)
 
 	userRepo := mysql.NewUserRepository(db)
 	roleRepo := mysql.NewRoleRepository(db)
@@ -91,7 +97,7 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 	}
 
 	avatarAssetService := service.NewAvatarAssetService(objectStorage)
-	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore, smsVerificationService, objectStorage.SupportsPublicURL)
+	authService := service.NewAuthService(cfg.JWT, cfg.Auth, authSettingRepo, userRepo, tokenStore, cacheStore, smsVerificationService, emailVerificationService, imageCaptchaService, objectStorage.SupportsPublicURL)
 	authSettingService := service.NewAuthSettingService(cfg.Auth, authSettingRepo, cacheStore)
 	brandingSettingService := service.NewBrandingSettingService(brandingSettingRepo, objectStorage, cacheStore)
 	loginAuditService := service.NewLoginAuditService(loginAuditRepo)
@@ -107,6 +113,8 @@ func NewRuntime(runDatabaseBootstrap bool) (*Runtime, error) {
 			authService,
 			avatarAssetService,
 			smsVerificationService,
+			emailVerificationService,
+			imageCaptchaService,
 			authSettingService,
 			brandingSettingService,
 			loginAuditService,

@@ -9,6 +9,7 @@ auth:
   enablePhoneLogin: true
   enableEmailRegistration: true
   enablePhoneRegistration: true
+  enableTwoFactor: false
 
 http:
   host: 0.0.0.0
@@ -90,6 +91,22 @@ sms:
     sender: ""
     templateID: ""
     signature: ""
+
+mail:
+  provider: mock
+  codeTTL: 5m
+  cooldown: 60s
+  fromName: Nex Console
+  fromAddress: no-reply@example.com
+  mock:
+    revealCode: true
+    fixedCode: ""
+  smtp:
+    host: smtp.example.com
+    port: 587
+    username: ""
+    password: ""
+    useTLS: true
 
 swagger:
   enabled: true

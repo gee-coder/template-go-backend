@@ -42,6 +42,7 @@ func (h *AuthSettingHandler) Update(c *gin.Context) {
 		EnablePhoneLogin:        req.EnablePhoneLogin,
 		EnableEmailRegistration: req.EnableEmailRegistration,
 		EnablePhoneRegistration: req.EnablePhoneRegistration,
+		EnableTwoFactor:         req.EnableTwoFactor,
 	})
 	if err != nil {
 		utils.RespondError(c, err)

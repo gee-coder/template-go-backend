@@ -18,6 +18,7 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Storage  StorageConfig  `mapstructure:"storage"`
 	SMS      SMSConfig      `mapstructure:"sms"`
+	Mail     MailConfig     `mapstructure:"mail"`
 	Swagger  SwaggerConfig  `mapstructure:"swagger"`
 }
 
@@ -110,12 +111,39 @@ type HuaweiSMSConfig struct {
 	Signature  string `mapstructure:"signature"`
 }
 
+// MailConfig describes email verification settings.
+type MailConfig struct {
+	Provider    string         `mapstructure:"provider"`
+	CodeTTL     time.Duration  `mapstructure:"codeTTL"`
+	Cooldown    time.Duration  `mapstructure:"cooldown"`
+	FromName    string         `mapstructure:"fromName"`
+	FromAddress string         `mapstructure:"fromAddress"`
+	Mock        MockMailConfig `mapstructure:"mock"`
+	SMTP        SMTPMailConfig `mapstructure:"smtp"`
+}
+
+// MockMailConfig describes the built-in mock mail provider.
+type MockMailConfig struct {
+	RevealCode bool   `mapstructure:"revealCode"`
+	FixedCode  string `mapstructure:"fixedCode"`
+}
+
+// SMTPMailConfig describes SMTP mail settings.
+type SMTPMailConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	UseTLS   bool   `mapstructure:"useTLS"`
+}
+
 // AuthConfig describes public auth settings.
 type AuthConfig struct {
 	EnableEmailLogin        bool `mapstructure:"enableEmailLogin"`
 	EnablePhoneLogin        bool `mapstructure:"enablePhoneLogin"`
 	EnableEmailRegistration bool `mapstructure:"enableEmailRegistration"`
 	EnablePhoneRegistration bool `mapstructure:"enablePhoneRegistration"`
+	EnableTwoFactor         bool `mapstructure:"enableTwoFactor"`
 }
 
 // HTTPConfig describes HTTP server settings.
@@ -198,6 +226,31 @@ func (c SMSConfig) ResolvedCooldown() time.Duration {
 
 // ResolvedProvider returns the configured SMS provider.
 func (c SMSConfig) ResolvedProvider() string {
+	provider := strings.ToLower(strings.TrimSpace(c.Provider))
+	if provider == "" {
+		return "mock"
+	}
+	return provider
+}
+
+// ResolvedCodeTTL returns the configured email code TTL.
+func (c MailConfig) ResolvedCodeTTL() time.Duration {
+	if c.CodeTTL <= 0 {
+		return 5 * time.Minute
+	}
+	return c.CodeTTL
+}
+
+// ResolvedCooldown returns the configured email resend cooldown.
+func (c MailConfig) ResolvedCooldown() time.Duration {
+	if c.Cooldown <= 0 {
+		return time.Minute
+	}
+	return c.Cooldown
+}
+
+// ResolvedProvider returns the configured mail provider.
+func (c MailConfig) ResolvedProvider() string {
 	provider := strings.ToLower(strings.TrimSpace(c.Provider))
 	if provider == "" {
 		return "mock"

@@ -10,8 +10,9 @@ import (
 
 // AuthService is the auth handler dependency contract.
 type AuthService interface {
-	Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*service.TokenPayload, error)
+	Login(ctx context.Context, input service.LoginInput) (*service.TokenPayload, error)
 	Register(ctx context.Context, input service.RegisterInput) (*service.TokenPayload, error)
+	SendTwoFactorCode(ctx context.Context, input service.SendTwoFactorCodeInput) (service.TwoFactorCodePayload, error)
 	Refresh(ctx context.Context, refreshToken string) (*service.TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*service.ProfileUser, error)
@@ -28,7 +29,16 @@ type AvatarAssetService interface {
 // SMSVerificationService is the SMS verification handler dependency contract.
 type SMSVerificationService interface {
 	SendCode(ctx context.Context, input service.SendSMSCodeInput) (service.SMSVerificationPayload, error)
-	VerifyCode(ctx context.Context, input service.VerifySMSCodeInput) error
+}
+
+// EmailVerificationService is the email verification handler dependency contract.
+type EmailVerificationService interface {
+	SendCode(ctx context.Context, input service.SendEmailCodeInput) (service.SMSVerificationPayload, error)
+}
+
+// ImageCaptchaService is the image captcha handler dependency contract.
+type ImageCaptchaService interface {
+	Create(ctx context.Context) (service.ImageCaptchaPayload, error)
 }
 
 // AuthSettingService is the auth setting handler dependency contract.

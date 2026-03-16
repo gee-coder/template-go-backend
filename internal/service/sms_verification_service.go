@@ -97,7 +97,7 @@ func (s *smsVerificationService) SendCode(ctx context.Context, input SendSMSCode
 		return SMSVerificationPayload{}, utils.NewAppError(400, 400, "invalid phone number")
 	}
 
-	purpose := normalizeSMSPurpose(input.Purpose)
+	purpose := normalizeVerificationPurpose(input.Purpose)
 	if purpose == "" {
 		return SMSVerificationPayload{}, utils.NewAppError(400, 400, "sms purpose is required")
 	}
@@ -165,7 +165,7 @@ func (s *smsVerificationService) VerifyCode(ctx context.Context, input VerifySMS
 		return utils.NewAppError(400, 400, "invalid phone number")
 	}
 
-	purpose := normalizeSMSPurpose(input.Purpose)
+	purpose := normalizeVerificationPurpose(input.Purpose)
 	if purpose == "" {
 		return utils.NewAppError(400, 400, "sms purpose is required")
 	}
@@ -242,10 +242,10 @@ func (mockSMSSender) Send(_ context.Context, _ smsMessage) error {
 	return nil
 }
 
-func normalizeSMSPurpose(value string) string {
+func normalizeVerificationPurpose(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	switch value {
-	case "register", "login", "bind_phone", "reset_password":
+	case "register", "login", "bind_phone", "reset_password", "two_factor":
 		return value
 	default:
 		return ""

@@ -17,6 +17,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const usernameLoginFailureTTL = 30 * time.Minute
+
 var (
 	emailPattern           = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 	phonePattern           = regexp.MustCompile(`^\+?[0-9]{6,20}$`)
@@ -54,6 +56,18 @@ type AuthOptions struct {
 	EnablePhoneLogin        bool `json:"enablePhoneLogin"`
 	EnableEmailRegistration bool `json:"enableEmailRegistration"`
 	EnablePhoneRegistration bool `json:"enablePhoneRegistration"`
+	EnableTwoFactor         bool `json:"enableTwoFactor"`
+}
+
+// LoginInput describes the public login payload.
+type LoginInput struct {
+	Account          string
+	LoginType        string
+	Password         string
+	VerificationCode string
+	CaptchaID        string
+	CaptchaCode      string
+	TwoFactorCode    string
 }
 
 // RegisterInput describes the public register payload.
@@ -65,6 +79,21 @@ type RegisterInput struct {
 	SMSCode      string
 }
 
+// SendTwoFactorCodeInput describes the two-factor send-code payload.
+type SendTwoFactorCodeInput struct {
+	Account   string
+	LoginType string
+}
+
+// TwoFactorCodePayload describes the two-factor send-code response.
+type TwoFactorCodePayload struct {
+	Channel    string `json:"channel"`
+	Target     string `json:"target"`
+	Provider   string `json:"provider"`
+	CooldownIn int64  `json:"cooldownIn"`
+	DebugCode  string `json:"debugCode,omitempty"`
+}
+
 // UpdateProfileInput describes self profile updates.
 type UpdateProfileInput struct {
 	Avatar string
@@ -72,8 +101,9 @@ type UpdateProfileInput struct {
 
 // AuthService provides auth capabilities.
 type AuthService interface {
-	Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*TokenPayload, error)
+	Login(ctx context.Context, input LoginInput) (*TokenPayload, error)
 	Register(ctx context.Context, input RegisterInput) (*TokenPayload, error)
+	SendTwoFactorCode(ctx context.Context, input SendTwoFactorCodeInput) (TwoFactorCodePayload, error)
 	Refresh(ctx context.Context, refreshToken string) (*TokenPayload, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uint) (*ProfileUser, error)
@@ -89,12 +119,10 @@ type authService struct {
 	userRepo           repository.UserRepository
 	tokenRepo          repository.TokenStore
 	cache              repository.CacheStore
+	smsService         SMSVerificationService
+	emailService       EmailVerificationService
+	captchaService     ImageCaptchaService
 	avatarURLValidator func(string) bool
-	smsVerifier        smsCodeVerifier
-}
-
-type smsCodeVerifier interface {
-	VerifyCode(ctx context.Context, input VerifySMSCodeInput) error
 }
 
 // NewAuthService creates the auth service.
@@ -105,7 +133,9 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenStore,
 	cache repository.CacheStore,
-	smsVerifier smsCodeVerifier,
+	smsService SMSVerificationService,
+	emailService EmailVerificationService,
+	captchaService ImageCaptchaService,
 	avatarURLValidator func(string) bool,
 ) AuthService {
 	return &authService{
@@ -115,35 +145,58 @@ func NewAuthService(
 		userRepo:           userRepo,
 		tokenRepo:          tokenRepo,
 		cache:              cache,
-		smsVerifier:        smsVerifier,
+		smsService:         smsService,
+		emailService:       emailService,
+		captchaService:     captchaService,
 		avatarURLValidator: avatarURLValidator,
 	}
 }
 
-func (s *authService) Login(ctx context.Context, account string, password string, loginType string, smsCode string) (*TokenPayload, error) {
+func (s *authService) Login(ctx context.Context, input LoginInput) (*TokenPayload, error) {
 	options, err := s.Options(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	user, resolvedLoginType, err := s.findUserForLogin(ctx, account, loginType, options)
+	account := strings.TrimSpace(input.Account)
+	if account == "" {
+		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required")
+	}
+
+	user, resolvedLoginType, err := s.findUserForLogin(ctx, account, input.LoginType, options)
 	if err != nil {
+		if resolvedLoginType == "username" {
+			_ = s.recordUsernameLoginFailure(ctx, account)
+		}
 		if errors.Is(err, utils.ErrNotFound) {
 			return nil, utils.ErrInvalidCredential
 		}
 		return nil, err
 	}
 
-	if !utils.CheckPassword(password, user.Password) {
-		return nil, utils.ErrInvalidCredential
+	switch resolvedLoginType {
+	case "username":
+		if err := s.verifyUsernameLogin(ctx, user, input, options); err != nil {
+			return nil, err
+		}
+	case "email":
+		if err := s.verifyEmailLogin(ctx, user, input, options); err != nil {
+			return nil, err
+		}
+	case "phone":
+		if err := s.verifyPhoneLogin(ctx, user, input, options); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "unsupported login type")
 	}
+
 	if user.Status != "enabled" {
 		return nil, utils.ErrForbidden
 	}
-	if resolvedLoginType == "phone" {
-		if err := s.verifyPhoneCode(ctx, user.Phone, "login", smsCode); err != nil {
-			return nil, err
-		}
+
+	if resolvedLoginType == "username" {
+		_ = s.clearUsernameLoginFailures(ctx, account)
 	}
 
 	return s.issueTokens(ctx, user)
@@ -223,6 +276,47 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) (*Token
 	return s.issueTokens(ctx, user)
 }
 
+func (s *authService) SendTwoFactorCode(ctx context.Context, input SendTwoFactorCodeInput) (TwoFactorCodePayload, error) {
+	options, err := s.Options(ctx)
+	if err != nil {
+		return TwoFactorCodePayload{}, err
+	}
+	if !options.EnableTwoFactor {
+		return TwoFactorCodePayload{}, utils.NewAppError(http.StatusForbidden, http.StatusForbidden, "two-factor authentication is disabled")
+	}
+
+	account := strings.TrimSpace(input.Account)
+	if account == "" {
+		return TwoFactorCodePayload{}, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "account is required")
+	}
+
+	loginType := strings.TrimSpace(input.LoginType)
+	if loginType != "" && loginType != "username" {
+		return TwoFactorCodePayload{}, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "two-factor code is only required for username login")
+	}
+
+	user, err := s.userRepo.GetByUsername(ctx, account)
+	if err != nil {
+		if errors.Is(err, utils.ErrNotFound) {
+			return TwoFactorCodePayload{}, utils.NewAppError(http.StatusNotFound, http.StatusNotFound, "user account does not exist")
+		}
+		return TwoFactorCodePayload{}, err
+	}
+
+	channel, target, payload, err := s.sendTwoFactorCodeForUser(ctx, user)
+	if err != nil {
+		return TwoFactorCodePayload{}, err
+	}
+
+	return TwoFactorCodePayload{
+		Channel:    channel,
+		Target:     target,
+		Provider:   payload.Provider,
+		CooldownIn: payload.CooldownIn,
+		DebugCode:  payload.DebugCode,
+	}, nil
+}
+
 func (s *authService) Refresh(ctx context.Context, refreshToken string) (*TokenPayload, error) {
 	userID, err := s.tokenRepo.Get(ctx, refreshToken)
 	if err != nil {
@@ -298,6 +392,152 @@ func (s *authService) ResolvePermissions(ctx context.Context, userID uint) ([]st
 
 func (s *authService) Options(ctx context.Context) (AuthOptions, error) {
 	return loadAuthOptions(ctx, s.defaults, s.authSettingRepo, s.cache)
+}
+
+func (s *authService) verifyUsernameLogin(ctx context.Context, user *model.User, input LoginInput, options AuthOptions) error {
+	needsCaptcha, err := s.shouldRequireUsernameCaptcha(ctx, input.Account)
+	if err != nil {
+		return err
+	}
+	if needsCaptcha {
+		if err := s.verifyImageCaptcha(ctx, input.CaptchaID, input.CaptchaCode); err != nil {
+			return err
+		}
+	}
+
+	if !utils.CheckPassword(input.Password, user.Password) {
+		_ = s.recordUsernameLoginFailure(ctx, input.Account)
+		return utils.ErrInvalidCredential
+	}
+
+	if options.EnableTwoFactor {
+		if err := s.verifyUsernameTwoFactor(ctx, user, input.TwoFactorCode); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *authService) verifyEmailLogin(ctx context.Context, user *model.User, input LoginInput, options AuthOptions) error {
+	if err := s.verifyImageCaptcha(ctx, input.CaptchaID, input.CaptchaCode); err != nil {
+		return err
+	}
+	if err := s.verifyEmailCode(ctx, user.Email, "login", input.VerificationCode); err != nil {
+		return err
+	}
+	if options.EnableTwoFactor {
+		if !utils.CheckPassword(input.Password, user.Password) {
+			return utils.ErrInvalidCredential
+		}
+	}
+	return nil
+}
+
+func (s *authService) verifyPhoneLogin(ctx context.Context, user *model.User, input LoginInput, options AuthOptions) error {
+	if err := s.verifyImageCaptcha(ctx, input.CaptchaID, input.CaptchaCode); err != nil {
+		return err
+	}
+	if err := s.verifyPhoneCode(ctx, user.Phone, "login", input.VerificationCode); err != nil {
+		return err
+	}
+	if options.EnableTwoFactor {
+		if !utils.CheckPassword(input.Password, user.Password) {
+			return utils.ErrInvalidCredential
+		}
+	}
+	return nil
+}
+
+func (s *authService) verifyUsernameTwoFactor(ctx context.Context, user *model.User, code string) error {
+	if strings.TrimSpace(code) == "" {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "two-factor verification code is required")
+	}
+
+	switch channel := preferredTwoFactorChannel(user); channel {
+	case "phone":
+		return s.verifyPhoneCode(ctx, user.Phone, "two_factor", code)
+	case "email":
+		return s.verifyEmailCode(ctx, user.Email, "two_factor", code)
+	default:
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "user has no available second factor target")
+	}
+}
+
+func (s *authService) sendTwoFactorCodeForUser(ctx context.Context, user *model.User) (string, string, SMSVerificationPayload, error) {
+	switch channel := preferredTwoFactorChannel(user); channel {
+	case "phone":
+		payload, err := s.smsService.SendCode(ctx, SendSMSCodeInput{
+			Phone:   user.Phone,
+			Purpose: "two_factor",
+		})
+		return "phone", maskPhone(user.Phone), payload, err
+	case "email":
+		payload, err := s.emailService.SendCode(ctx, SendEmailCodeInput{
+			Email:   user.Email,
+			Purpose: "two_factor",
+		})
+		return "email", maskEmail(user.Email), payload, err
+	default:
+		return "", "", SMSVerificationPayload{}, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "user has no available second factor target")
+	}
+}
+
+func (s *authService) verifyImageCaptcha(ctx context.Context, captchaID string, captchaCode string) error {
+	if s.captchaService == nil {
+		return utils.NewAppError(http.StatusServiceUnavailable, http.StatusServiceUnavailable, "image captcha is not configured")
+	}
+	if strings.TrimSpace(captchaID) == "" || strings.TrimSpace(captchaCode) == "" {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "image captcha is required")
+	}
+	return s.captchaService.Verify(ctx, captchaID, captchaCode)
+}
+
+func (s *authService) verifyPhoneCode(ctx context.Context, phone string, purpose string, code string) error {
+	if s.smsService == nil {
+		return utils.NewAppError(http.StatusServiceUnavailable, http.StatusServiceUnavailable, "phone verification is not configured")
+	}
+	if !isValidPhone(normalizePhone(phone)) {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
+	}
+	if strings.TrimSpace(code) == "" {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "verification code is required")
+	}
+	return s.smsService.VerifyCode(ctx, VerifySMSCodeInput{
+		Phone:   phone,
+		Purpose: purpose,
+		Code:    code,
+	})
+}
+
+func (s *authService) verifyEmailCode(ctx context.Context, email string, purpose string, code string) error {
+	if s.emailService == nil {
+		return utils.NewAppError(http.StatusServiceUnavailable, http.StatusServiceUnavailable, "email verification is not configured")
+	}
+	if !isValidEmail(normalizeEmail(email)) {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid email address")
+	}
+	if strings.TrimSpace(code) == "" {
+		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "verification code is required")
+	}
+	return s.emailService.VerifyCode(ctx, VerifyEmailCodeInput{
+		Email:   email,
+		Purpose: purpose,
+		Code:    code,
+	})
+}
+
+func preferredTwoFactorChannel(user *model.User) string {
+	if user == nil {
+		return ""
+	}
+	if strings.TrimSpace(user.Phone) != "" {
+		return "phone"
+	}
+	if strings.TrimSpace(user.Email) != "" {
+		return "email"
+	}
+	return ""
 }
 
 func (s *authService) issueTokens(ctx context.Context, user *model.User) (*TokenPayload, error) {
@@ -404,6 +644,7 @@ func loadAuthOptions(ctx context.Context, defaults config.AuthConfig, repo repos
 	options.EnablePhoneLogin = setting.EnablePhoneLogin
 	options.EnableEmailRegistration = setting.EnableEmailRegistration
 	options.EnablePhoneRegistration = setting.EnablePhoneRegistration
+	options.EnableTwoFactor = setting.EnableTwoFactor
 	options = normalizeAuthOptions(options)
 
 	if cache != nil {
@@ -420,17 +661,12 @@ func authOptionsFromDefaults(defaults config.AuthConfig) AuthOptions {
 		EnablePhoneLogin:        defaults.EnablePhoneLogin,
 		EnableEmailRegistration: defaults.EnableEmailRegistration,
 		EnablePhoneRegistration: defaults.EnablePhoneRegistration,
+		EnableTwoFactor:         defaults.EnableTwoFactor,
 	})
 }
 
 func normalizeAuthOptions(options AuthOptions) AuthOptions {
 	options.EnableUsernameLogin = true
-	if !options.EnableEmailLogin {
-		options.EnableEmailRegistration = false
-	}
-	if !options.EnablePhoneLogin {
-		options.EnablePhoneRegistration = false
-	}
 	return options
 }
 
@@ -496,21 +732,43 @@ func (s *authService) findUserByFallback(ctx context.Context, account string, op
 	return user, "username", err
 }
 
-func (s *authService) verifyPhoneCode(ctx context.Context, phone string, purpose string, smsCode string) error {
-	if s.smsVerifier == nil {
-		return utils.NewAppError(http.StatusServiceUnavailable, http.StatusServiceUnavailable, "phone verification is not configured")
+func (s *authService) shouldRequireUsernameCaptcha(ctx context.Context, account string) (bool, error) {
+	if s.cache == nil {
+		return false, nil
 	}
-	if !isValidPhone(normalizePhone(phone)) {
-		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "invalid phone number")
+
+	var count int
+	if err := s.cache.GetJSON(ctx, usernameLoginFailureKey(account), &count); err != nil {
+		if err == repository.ErrCacheMiss {
+			return false, nil
+		}
+		return false, err
 	}
-	if strings.TrimSpace(smsCode) == "" {
-		return utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "sms verification code is required")
+	return count >= 2, nil
+}
+
+func (s *authService) recordUsernameLoginFailure(ctx context.Context, account string) error {
+	if s.cache == nil {
+		return nil
 	}
-	return s.smsVerifier.VerifyCode(ctx, VerifySMSCodeInput{
-		Phone:   phone,
-		Purpose: purpose,
-		Code:    smsCode,
-	})
+
+	var count int
+	if err := s.cache.GetJSON(ctx, usernameLoginFailureKey(account), &count); err != nil && err != repository.ErrCacheMiss {
+		return err
+	}
+	count++
+	return s.cache.SetJSON(ctx, usernameLoginFailureKey(account), count, usernameLoginFailureTTL)
+}
+
+func (s *authService) clearUsernameLoginFailures(ctx context.Context, account string) error {
+	if s.cache == nil {
+		return nil
+	}
+	return s.cache.Delete(ctx, usernameLoginFailureKey(account))
+}
+
+func usernameLoginFailureKey(account string) string {
+	return "auth:username-failures:" + strings.ToLower(strings.TrimSpace(account))
 }
 
 func detectRegisterType(registerType string, account string) string {

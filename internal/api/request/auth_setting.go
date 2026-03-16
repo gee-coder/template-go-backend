@@ -6,4 +6,5 @@ type UpdateAuthSettingRequest struct {
 	EnablePhoneLogin        bool `json:"enablePhoneLogin"`
 	EnableEmailRegistration bool `json:"enableEmailRegistration"`
 	EnablePhoneRegistration bool `json:"enablePhoneRegistration"`
+	EnableTwoFactor         bool `json:"enableTwoFactor"`
 }

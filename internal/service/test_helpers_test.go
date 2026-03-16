@@ -142,8 +142,22 @@ type fakeCacheStore struct {
 }
 
 type fakeSMSVerificationService struct {
+	sendErr   error
+	sent      []SendSMSCodeInput
 	verifyErr error
 	verified  []VerifySMSCodeInput
+}
+
+type fakeEmailVerificationService struct {
+	sendErr   error
+	sent      []SendEmailCodeInput
+	verifyErr error
+	verified  []VerifyEmailCodeInput
+}
+
+type fakeImageCaptchaService struct {
+	verifyErr error
+	verified  [][2]string
 }
 
 func (f *fakeTokenStore) Save(ctx context.Context, refreshToken string, userID uint, ttl time.Duration) error {
@@ -205,5 +219,44 @@ func (f *fakeCacheStore) DeleteByPrefix(ctx context.Context, prefix string) erro
 
 func (f *fakeSMSVerificationService) VerifyCode(ctx context.Context, input VerifySMSCodeInput) error {
 	f.verified = append(f.verified, input)
+	return f.verifyErr
+}
+
+func (f *fakeSMSVerificationService) SendCode(ctx context.Context, input SendSMSCodeInput) (SMSVerificationPayload, error) {
+	f.sent = append(f.sent, input)
+	return SMSVerificationPayload{
+		Provider:   "mock",
+		CooldownIn: 60,
+		DebugCode:  "123456",
+	}, f.sendErr
+}
+
+func (f *fakeEmailVerificationService) SendCode(ctx context.Context, input SendEmailCodeInput) (SMSVerificationPayload, error) {
+	f.sent = append(f.sent, input)
+	return SMSVerificationPayload{
+		Provider:   "mock",
+		CooldownIn: 60,
+		DebugCode:  "654321",
+	}, f.sendErr
+}
+
+func (f *fakeEmailVerificationService) VerifyCode(ctx context.Context, input VerifyEmailCodeInput) error {
+	f.verified = append(f.verified, input)
+	return f.verifyErr
+}
+
+func (f *fakeImageCaptchaService) Create(ctx context.Context) (ImageCaptchaPayload, error) {
+	return ImageCaptchaPayload{
+		CaptchaID: "captcha_123",
+		ImageData: "data:image/svg+xml;base64,abc",
+		ExpiresIn: 300,
+	}, nil
+}
+
+func (f *fakeImageCaptchaService) Verify(ctx context.Context, captchaID string, code string) error {
+	f.verified = append(f.verified, [2]string{captchaID, code})
+	if captchaID == "" || code == "" {
+		return utils.NewAppError(400, 400, "image captcha is required")
+	}
 	return f.verifyErr
 }

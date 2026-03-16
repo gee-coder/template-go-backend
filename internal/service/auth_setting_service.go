@@ -15,6 +15,7 @@ type UpdateAuthSettingInput struct {
 	EnablePhoneLogin        bool
 	EnableEmailRegistration bool
 	EnablePhoneRegistration bool
+	EnableTwoFactor         bool
 }
 
 // AuthSettingService provides admin-facing auth setting operations.
@@ -55,6 +56,7 @@ func (s *authSettingService) Update(ctx context.Context, input UpdateAuthSetting
 	setting.EnablePhoneLogin = input.EnablePhoneLogin
 	setting.EnableEmailRegistration = input.EnableEmailRegistration
 	setting.EnablePhoneRegistration = input.EnablePhoneRegistration
+	setting.EnableTwoFactor = input.EnableTwoFactor
 
 	options := normalizeAuthOptions(AuthOptions{
 		EnableUsernameLogin:     true,
@@ -62,12 +64,14 @@ func (s *authSettingService) Update(ctx context.Context, input UpdateAuthSetting
 		EnablePhoneLogin:        setting.EnablePhoneLogin,
 		EnableEmailRegistration: setting.EnableEmailRegistration,
 		EnablePhoneRegistration: setting.EnablePhoneRegistration,
+		EnableTwoFactor:         setting.EnableTwoFactor,
 	})
 
 	setting.EnableEmailLogin = options.EnableEmailLogin
 	setting.EnablePhoneLogin = options.EnablePhoneLogin
 	setting.EnableEmailRegistration = options.EnableEmailRegistration
 	setting.EnablePhoneRegistration = options.EnablePhoneRegistration
+	setting.EnableTwoFactor = options.EnableTwoFactor
 
 	if err := s.repo.Save(ctx, setting); err != nil {
 		return AuthOptions{}, err

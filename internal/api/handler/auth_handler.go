@@ -13,19 +13,30 @@ import (
 
 // AuthHandler handles auth APIs.
 type AuthHandler struct {
-	authService        AuthService
-	loginAuditService  LoginAuditService
-	avatarAssetService AvatarAssetService
-	smsService         SMSVerificationService
+	authService         AuthService
+	loginAuditService   LoginAuditService
+	avatarAssetService  AvatarAssetService
+	smsService          SMSVerificationService
+	emailService        EmailVerificationService
+	imageCaptchaService ImageCaptchaService
 }
 
 // NewAuthHandler creates an auth handler.
-func NewAuthHandler(authService AuthService, loginAuditService LoginAuditService, avatarAssetService AvatarAssetService, smsService SMSVerificationService) *AuthHandler {
+func NewAuthHandler(
+	authService AuthService,
+	loginAuditService LoginAuditService,
+	avatarAssetService AvatarAssetService,
+	smsService SMSVerificationService,
+	emailService EmailVerificationService,
+	imageCaptchaService ImageCaptchaService,
+) *AuthHandler {
 	return &AuthHandler{
-		authService:        authService,
-		loginAuditService:  loginAuditService,
-		avatarAssetService: avatarAssetService,
-		smsService:         smsService,
+		authService:         authService,
+		loginAuditService:   loginAuditService,
+		avatarAssetService:  avatarAssetService,
+		smsService:          smsService,
+		emailService:        emailService,
+		imageCaptchaService: imageCaptchaService,
 	}
 }
 
@@ -52,7 +63,15 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	payload, err := h.authService.Login(c.Request.Context(), account, req.Password, req.LoginType, req.SMSCode)
+	payload, err := h.authService.Login(c.Request.Context(), service.LoginInput{
+		Account:          account,
+		LoginType:        req.LoginType,
+		Password:         req.Password,
+		VerificationCode: req.VerificationCode,
+		CaptchaID:        req.CaptchaID,
+		CaptchaCode:      req.CaptchaCode,
+		TwoFactorCode:    req.TwoFactorCode,
+	})
 	h.writeLoginAudit(c, account, req.LoginType, payload, err)
 	if err != nil {
 		utils.RespondError(c, err)
@@ -83,6 +102,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	utils.RespondCreated(c, payload)
 }
 
+// Captcha returns a generated image captcha.
+func (h *AuthHandler) Captcha(c *gin.Context) {
+	payload, err := h.imageCaptchaService.Create(c.Request.Context())
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, payload)
+}
+
 // SendSMSCode sends a phone verification code through the configured provider.
 func (h *AuthHandler) SendSMSCode(c *gin.Context) {
 	var req request.SendSMSCodeRequest
@@ -102,23 +131,42 @@ func (h *AuthHandler) SendSMSCode(c *gin.Context) {
 	utils.RespondOK(c, payload)
 }
 
-// VerifySMSCode verifies a phone verification code.
-func (h *AuthHandler) VerifySMSCode(c *gin.Context) {
-	var req request.VerifySMSCodeRequest
+// SendEmailCode sends an email verification code through the configured provider.
+func (h *AuthHandler) SendEmailCode(c *gin.Context) {
+	var req request.SendEmailCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
 		return
 	}
 
-	if err := h.smsService.VerifyCode(c.Request.Context(), service.VerifySMSCodeInput{
-		Phone:   req.Phone,
+	payload, err := h.emailService.SendCode(c.Request.Context(), service.SendEmailCodeInput{
+		Email:   req.Email,
 		Purpose: req.Purpose,
-		Code:    req.Code,
-	}); err != nil {
+	})
+	if err != nil {
 		utils.RespondError(c, err)
 		return
 	}
-	utils.RespondOK(c, gin.H{"verified": true})
+	utils.RespondOK(c, payload)
+}
+
+// SendTwoFactorCode sends a second-factor verification code for username login.
+func (h *AuthHandler) SendTwoFactorCode(c *gin.Context) {
+	var req request.SendTwoFactorCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, utils.BindErrorMessage(err)))
+		return
+	}
+
+	payload, err := h.authService.SendTwoFactorCode(c.Request.Context(), service.SendTwoFactorCodeInput{
+		Account:   req.Account,
+		LoginType: req.LoginType,
+	})
+	if err != nil {
+		utils.RespondError(c, err)
+		return
+	}
+	utils.RespondOK(c, payload)
 }
 
 // Refresh handles access token refresh.
@@ -184,7 +232,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 func (h *AuthHandler) UploadAvatarAsset(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "请选择要上传的头像图片"))
+		utils.RespondError(c, utils.NewAppError(http.StatusBadRequest, http.StatusBadRequest, "please choose an avatar image"))
 		return
 	}
 

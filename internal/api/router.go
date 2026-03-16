@@ -28,6 +28,8 @@ func NewHandlerSet(
 	auth handler.AuthService,
 	avatarAsset handler.AvatarAssetService,
 	sms handler.SMSVerificationService,
+	email handler.EmailVerificationService,
+	captcha handler.ImageCaptchaService,
 	authSetting handler.AuthSettingService,
 	brandingSetting handler.BrandingSettingService,
 	loginAudit handler.LoginAuditService,
@@ -38,7 +40,7 @@ func NewHandlerSet(
 ) *HandlerSet {
 	return &HandlerSet{
 		Health:          handler.NewHealthHandler(),
-		Auth:            handler.NewAuthHandler(auth, loginAudit, avatarAsset, sms),
+		Auth:            handler.NewAuthHandler(auth, loginAudit, avatarAsset, sms, email, captcha),
 		AuthSetting:     handler.NewAuthSettingHandler(authSetting),
 		BrandingSetting: handler.NewBrandingSettingHandler(brandingSetting),
 		LoginAudit:      handler.NewLoginAuditHandler(loginAudit),
@@ -114,10 +116,12 @@ func registerPublicRoutes(router *gin.Engine, handlers *HandlerSet) {
 func registerAuthRoutes(router *gin.Engine, cfg *config.Config, handlers *HandlerSet) {
 	apiV1 := router.Group("/api/v1")
 	apiV1.GET("/auth/options", handlers.Auth.Options)
+	apiV1.GET("/auth/captcha", handlers.Auth.Captcha)
 	apiV1.POST("/auth/login", handlers.Auth.Login)
 	apiV1.POST("/auth/register", handlers.Auth.Register)
 	apiV1.POST("/auth/sms-codes", handlers.Auth.SendSMSCode)
-	apiV1.POST("/auth/sms-codes/verify", handlers.Auth.VerifySMSCode)
+	apiV1.POST("/auth/email-codes", handlers.Auth.SendEmailCode)
+	apiV1.POST("/auth/two-factor-codes", handlers.Auth.SendTwoFactorCode)
 	apiV1.POST("/auth/refresh", handlers.Auth.Refresh)
 
 	authenticated := apiV1.Group("")
